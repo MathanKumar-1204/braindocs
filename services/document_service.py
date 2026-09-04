@@ -47,17 +47,7 @@ def extract_text(file_bytes: bytes, filename: str) -> str:
             text_parts = [para.text for para in doc.paragraphs if para.text.strip()]
             text = "\n\n".join(text_parts)
 
-        elif ext == "csv":
-            try:
-                import pandas as pd
-                df = pd.read_csv(io.BytesIO(file_bytes))
-                text = df.to_csv(index=False)
-            except Exception:
-                # Fallback to standard csv module
-                content = file_bytes.decode("utf-8", errors="ignore")
-                text = content
-
-        elif ext == "txt":
+        elif ext in ["csv", "txt"]:
             text = file_bytes.decode("utf-8", errors="ignore")
             
         else:
