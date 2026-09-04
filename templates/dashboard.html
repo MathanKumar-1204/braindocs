@@ -1,0 +1,221 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - BRAINDOCS{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+    
+    <!-- Top Welcome Banner & Chatbot Share Link -->
+    <div class="p-6 rounded-2xl bg-gradient-to-r from-slate-900 via-indigo-950/40 to-slate-900 border border-slate-800 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 shadow-xl">
+        <div>
+            <div class="flex items-center space-x-2">
+                <h1 class="text-2xl font-bold text-white">Welcome back, <span class="text-brand-400">@{{ user.username }}</span></h1>
+                <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Active Workspace</span>
+            </div>
+            <p class="mt-1 text-sm text-slate-400">
+                Your Pinecone vector namespace <code class="text-brand-300 font-mono bg-slate-950 px-1.5 py-0.5 rounded">{{ user.username }}</code> is live.
+            </p>
+        </div>
+
+        <!-- Chatbot Link Share Card -->
+        <div class="w-full md:w-auto flex flex-col sm:flex-row items-stretch sm:items-center gap-2 bg-slate-950 p-2 rounded-xl border border-slate-800">
+            <div class="flex items-center space-x-2 px-3 py-1 text-xs text-slate-300 font-mono">
+                <i data-lucide="bot" class="w-4 h-4 text-brand-400"></i>
+                <span class="truncate max-w-xs">{{ request.host_url }}{{ user.username }}</span>
+            </div>
+            <div class="flex items-center space-x-2">
+                <button onclick="copyChatbotLink('{{ request.host_url }}{{ user.username }}')" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-brand-600 hover:bg-brand-500 text-white transition flex items-center gap-1.5">
+                    <i data-lucide="copy" class="w-3.5 h-3.5"></i> Copy Link
+                </button>
+                <a href="/{{ user.username }}" target="_blank" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 transition flex items-center gap-1.5">
+                    <i data-lucide="external-link" class="w-3.5 h-3.5"></i> Open Bot
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Stats Cards -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
+        <div class="p-5 rounded-2xl bg-slate-900/80 border border-slate-800 flex items-center justify-between">
+            <div>
+                <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">Uploaded Documents</p>
+                <h3 class="mt-1 text-2xl font-bold text-white">{{ documents|length }}</h3>
+            </div>
+            <div class="w-10 h-10 rounded-xl bg-brand-500/10 border border-brand-500/20 text-brand-400 flex items-center justify-center">
+                <i data-lucide="file-text" class="w-5 h-5"></i>
+            </div>
+        </div>
+
+        <div class="p-5 rounded-2xl bg-slate-900/80 border border-slate-800 flex items-center justify-between">
+            <div>
+                <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">Pinecone Namespace</p>
+                <h3 class="mt-1 text-lg font-mono font-bold text-brand-400">{{ user.username }}</h3>
+            </div>
+            <div class="w-10 h-10 rounded-xl bg-brand-500/10 border border-brand-500/20 text-brand-400 flex items-center justify-center">
+                <i data-lucide="database" class="w-5 h-5"></i>
+            </div>
+        </div>
+
+        <div class="p-5 rounded-2xl bg-slate-900/80 border border-slate-800 flex items-center justify-between">
+            <div>
+                <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">Supabase Storage Folder</p>
+                <h3 class="mt-1 text-sm font-mono font-bold text-slate-200">{{ user.username }}/</h3>
+            </div>
+            <div class="w-10 h-10 rounded-xl bg-brand-500/10 border border-brand-500/20 text-brand-400 flex items-center justify-center">
+                <i data-lucide="folder-archive" class="w-5 h-5"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- Upload Document Workspace Section -->
+    <div class="p-6 rounded-2xl bg-slate-900/80 border border-slate-800 shadow-xl space-y-6">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-4">
+            <div>
+                <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                    <i data-lucide="upload-cloud" class="w-5 h-5 text-brand-400"></i>
+                    Upload Document to Vectorize
+                </h2>
+                <p class="text-xs text-slate-400 mt-1">Supported formats: PDF, DOCX, TXT, CSV. Files will be vectorized into your Pinecone namespace and saved in Supabase storage.</p>
+            </div>
+        </div>
+
+        <!-- Upload Form -->
+        <form id="upload-form" action="{{ url_for('upload_document') }}" method="POST" enctype="multipart/form-data" class="space-y-4">
+            <div id="dropzone" class="border-2 border-dashed border-slate-700 hover:border-brand-500/60 rounded-2xl p-8 text-center bg-slate-950/50 transition cursor-pointer flex flex-col items-center justify-center group">
+                <input type="file" id="file-input" name="file" accept=".pdf,.docx,.txt,.csv" class="hidden" required>
+                <div class="w-14 h-14 rounded-2xl bg-slate-900 border border-slate-800 text-brand-400 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                    <i data-lucide="file-up" class="w-7 h-7"></i>
+                </div>
+                <p class="text-sm font-semibold text-slate-200">
+                    Click to select file or drag & drop here
+                </p>
+                <p class="text-xs text-slate-500 mt-1">PDF, DOCX, TXT, CSV (Max file size: 25MB)</p>
+                
+                <!-- Selected File Display -->
+                <div id="selected-file-info" class="hidden mt-4 px-4 py-2 rounded-xl bg-brand-500/10 border border-brand-500/30 text-brand-300 text-xs font-mono flex items-center space-x-2">
+                    <i data-lucide="check-circle" class="w-4 h-4 text-brand-400"></i>
+                    <span id="selected-filename">filename.pdf</span>
+                </div>
+            </div>
+
+            <!-- Upload Progress & Status -->
+            <div id="upload-status" class="hidden p-4 rounded-xl bg-brand-900/30 border border-brand-800 text-xs text-brand-200 space-y-2">
+                <div class="flex items-center justify-between">
+                    <span class="font-semibold flex items-center gap-2">
+                        <i data-lucide="loader-2" class="w-4 h-4 animate-spin text-brand-400"></i>
+                        <span id="status-text">Extracting text & generating vector embeddings...</span>
+                    </span>
+                </div>
+                <div class="w-full bg-slate-900 rounded-full h-1.5 overflow-hidden">
+                    <div id="progress-bar" class="bg-gradient-to-r from-brand-500 to-indigo-500 h-1.5 rounded-full w-1/3 animate-pulse"></div>
+                </div>
+            </div>
+
+            <div class="flex justify-end">
+                <button type="submit" id="upload-btn" class="px-6 py-2.5 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 shadow-md shadow-brand-500/20 transition flex items-center gap-2">
+                    <i data-lucide="sparkles" class="w-4 h-4"></i> Upload & Vectorize
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Uploaded Documents Preview Table -->
+    <div class="p-6 rounded-2xl bg-slate-900/80 border border-slate-800 shadow-xl space-y-4">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-4">
+            <h3 class="text-md font-bold text-white flex items-center gap-2">
+                <i data-lucide="layers" class="w-5 h-5 text-brand-400"></i>
+                Active Vectors in Namespace @{{ user.username }}
+            </h3>
+            <a href="{{ url_for('profile') }}" class="text-xs font-semibold text-brand-400 hover:underline">
+                Manage Documents in Profile &rarr;
+            </a>
+        </div>
+
+        {% if documents %}
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs text-slate-300">
+                <thead class="bg-slate-950 text-slate-400 uppercase font-semibold">
+                    <tr>
+                        <th class="px-4 py-3 rounded-l-lg">Document Name</th>
+                        <th class="px-4 py-3">Type</th>
+                        <th class="px-4 py-3">Size</th>
+                        <th class="px-4 py-3">Vector Chunks</th>
+                        <th class="px-4 py-3 rounded-r-lg">Uploaded At</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-800/60">
+                    {% for doc in documents %}
+                    <tr class="hover:bg-slate-800/30 transition">
+                        <td class="px-4 py-3 font-semibold text-white flex items-center gap-2">
+                            <i data-lucide="file" class="w-4 h-4 text-brand-400"></i>
+                            {{ doc.filename }}
+                        </td>
+                        <td class="px-4 py-3 font-mono text-slate-400">{{ doc.file_type|upper }}</td>
+                        <td class="px-4 py-3 text-slate-400">{{ (doc.file_size / 1024)|round(1) }} KB</td>
+                        <td class="px-4 py-3 font-mono text-brand-300">{{ doc.chunk_count }} chunks</td>
+                        <td class="px-4 py-3 text-slate-400">{{ doc.created_at[:10] if doc.created_at else 'Recent' }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-8 text-slate-500 text-xs">
+            <i data-lucide="inbox" class="w-8 h-8 mx-auto text-slate-600 mb-2"></i>
+            No documents uploaded yet. Upload a document above to get started!
+        </div>
+        {% endif %}
+    </div>
+
+</div>
+
+<script>
+    const dropzone = document.getElementById('dropzone');
+    const fileInput = document.getElementById('file-input');
+    const fileInfo = document.getElementById('selected-file-info');
+    const filenameDisplay = document.getElementById('selected-filename');
+    const uploadForm = document.getElementById('upload-form');
+    const uploadStatus = document.getElementById('upload-status');
+    const uploadBtn = document.getElementById('upload-btn');
+
+    dropzone.addEventListener('click', () => fileInput.click());
+
+    fileInput.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) {
+            filenameDisplay.textContent = e.target.files[0].name;
+            fileInfo.classList.remove('hidden');
+        }
+    });
+
+    dropzone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropzone.classList.add('border-brand-500');
+    });
+
+    dropzone.addEventListener('dragleave', () => {
+        dropzone.classList.remove('border-brand-500');
+    });
+
+    dropzone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropzone.classList.remove('border-brand-500');
+        if (e.dataTransfer.files.length > 0) {
+            fileInput.files = e.dataTransfer.files;
+            filenameDisplay.textContent = e.dataTransfer.files[0].name;
+            fileInfo.classList.remove('hidden');
+        }
+    });
+
+    uploadForm.addEventListener('submit', () => {
+        uploadStatus.classList.remove('hidden');
+        uploadBtn.disabled = true;
+        uploadBtn.classList.add('opacity-50');
+    });
+
+    function copyChatbotLink(link) {
+        navigator.clipboard.writeText(link).then(() => {
+            alert('Chatbot link copied to clipboard: ' + link);
+        });
+    }
+</script>
+{% endblock %}

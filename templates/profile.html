@@ -1,0 +1,213 @@
+{% extends "base.html" %}
+
+{% block title %}Profile & Visitor Analytics - BRAINDOCS{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8" x-data="{ activeTab: 'documents' }">
+
+    <!-- Profile Header Card -->
+    <div class="p-6 rounded-2xl bg-slate-900/80 border border-slate-800 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 shadow-xl">
+        <div class="flex items-center space-x-4">
+            <div class="w-16 h-16 rounded-2xl bg-gradient-to-tr from-brand-600 to-indigo-500 flex items-center justify-center text-white text-2xl font-bold shadow-lg shadow-brand-500/20">
+                {{ user.username[0]|upper if user.username else 'U' }}
+            </div>
+            <div>
+                <h1 class="text-2xl font-bold text-white">@{{ user.username }}</h1>
+                <p class="text-xs text-slate-400 font-mono mt-0.5">{{ user.email }}</p>
+                <div class="flex items-center space-x-3 mt-2 text-xs text-slate-400">
+                    <span class="flex items-center gap-1"><i data-lucide="database" class="w-3.5 h-3.5 text-brand-400"></i> Pinecone NS: <strong class="text-slate-200">{{ user.username }}</strong></span>
+                    <span class="flex items-center gap-1"><i data-lucide="folder" class="w-3.5 h-3.5 text-brand-400"></i> Bucket: <strong class="text-slate-200">{{ user.username }}/</strong></span>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex items-center space-x-3 bg-slate-950 p-2 rounded-xl border border-slate-800">
+            <a href="/{{ user.username }}" target="_blank" class="px-4 py-2 rounded-lg text-xs font-semibold text-white bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 transition flex items-center gap-2">
+                <i data-lucide="bot" class="w-4 h-4"></i> Test My Public Chatbot
+            </a>
+        </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <div class="border-b border-slate-800 flex space-x-8">
+        <button id="tab-docs-btn" onclick="switchTab('documents')" class="pb-3 border-b-2 border-brand-500 text-brand-400 font-bold text-sm flex items-center gap-2 transition">
+            <i data-lucide="file-text" class="w-4 h-4"></i> Uploaded Documents ({{ documents|length }})
+        </button>
+        <button id="tab-chats-btn" onclick="switchTab('chats')" class="pb-3 border-b-2 border-transparent text-slate-400 hover:text-slate-200 font-semibold text-sm flex items-center gap-2 transition">
+            <i data-lucide="messages-square" class="w-4 h-4"></i> Visitor Chat Logs ({{ chat_logs|length }})
+        </button>
+    </div>
+
+    <!-- TAB 1: Document Management (With Deletion from Pinecone & Supabase Storage) -->
+    <div id="tab-documents" class="space-y-4">
+        <div class="p-6 rounded-2xl bg-slate-900/80 border border-slate-800 shadow-xl">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-4 mb-4">
+                <div>
+                    <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                        <i data-lucide="hard-drive" class="w-5 h-5 text-brand-400"></i>
+                        Uploaded Files & Vector Index
+                    </h2>
+                    <p class="text-xs text-slate-400">Deleting a file removes its raw storage copy from Supabase Storage and purges all vector chunks from your Pinecone namespace.</p>
+                </div>
+                <a href="{{ url_for('dashboard') }}" class="px-3 py-1.5 rounded-xl bg-brand-600 text-white text-xs font-semibold hover:bg-brand-500 transition">
+                    + Upload New File
+                </a>
+            </div>
+
+            {% if documents %}
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-xs text-slate-300">
+                    <thead class="bg-slate-950 text-slate-400 uppercase font-semibold">
+                        <tr>
+                            <th class="px-4 py-3 rounded-l-lg">File Name</th>
+                            <th class="px-4 py-3">Format</th>
+                            <th class="px-4 py-3">Storage Path</th>
+                            <th class="px-4 py-3">Size</th>
+                            <th class="px-4 py-3">Chunks</th>
+                            <th class="px-4 py-3">Uploaded Date</th>
+                            <th class="px-4 py-3 text-right rounded-r-lg">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-800/60">
+                        {% for doc in documents %}
+                        <tr id="doc-row-{{ doc.id }}" class="hover:bg-slate-800/30 transition">
+                            <td class="px-4 py-3 font-semibold text-white flex items-center gap-2">
+                                <i data-lucide="file-check" class="w-4 h-4 text-emerald-400"></i>
+                                {{ doc.filename }}
+                            </td>
+                            <td class="px-4 py-3 font-mono text-slate-400">{{ doc.file_type|upper }}</td>
+                            <td class="px-4 py-3 font-mono text-xs text-slate-400">{{ doc.file_path }}</td>
+                            <td class="px-4 py-3 text-slate-400">{{ (doc.file_size / 1024)|round(1) }} KB</td>
+                            <td class="px-4 py-3 font-mono text-brand-300">{{ doc.chunk_count }} chunks</td>
+                            <td class="px-4 py-3 text-slate-400">{{ doc.created_at[:10] if doc.created_at else 'N/A' }}</td>
+                            <td class="px-4 py-3 text-right">
+                                <button onclick="deleteDocument('{{ doc.id }}', '{{ doc.filename }}')" class="px-3 py-1.5 rounded-lg text-rose-300 bg-rose-950/60 border border-rose-800/60 hover:bg-rose-900 transition font-semibold flex items-center gap-1 ml-auto">
+                                    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Delete
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-12 text-slate-500 text-xs">
+                <i data-lucide="folder-open" class="w-10 h-10 mx-auto text-slate-600 mb-2"></i>
+                No documents found in your vector namespace.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- TAB 2: Visitor Chat Logs & Sessions -->
+    <div id="tab-chats" class="hidden space-y-4">
+        <div class="p-6 rounded-2xl bg-slate-900/80 border border-slate-800 shadow-xl">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-800 pb-4 mb-4 gap-4">
+                <div>
+                    <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                        <i data-lucide="users" class="w-5 h-5 text-brand-400"></i>
+                        Visitor Chat Sessions & Mail IDs
+                    </h2>
+                    <p class="text-xs text-slate-400">Track which email addresses interacted with your chatbot and view their full conversation prompts and responses.</p>
+                </div>
+            </div>
+
+            {% if chat_logs %}
+            <div class="space-y-4">
+                {% for chat in chat_logs %}
+                <div class="p-4 rounded-xl bg-slate-950 border border-slate-800/80 space-y-3">
+                    <div class="flex items-center justify-between text-xs border-b border-slate-800/60 pb-2">
+                        <div class="flex items-center space-x-2">
+                            <span class="w-2 h-2 rounded-full bg-brand-400"></span>
+                            <span class="font-semibold text-brand-300">Visitor Email:</span>
+                            <span class="font-mono text-white font-bold bg-slate-900 px-2 py-0.5 rounded border border-slate-800">{{ chat.visitor_email }}</span>
+                        </div>
+                        <span class="text-slate-500">{{ chat.created_at[:19] if chat.created_at else 'Recent' }}</span>
+                    </div>
+
+                    <!-- User Message -->
+                    <div class="space-y-1">
+                        <p class="text-xs font-semibold text-slate-400 flex items-center gap-1">
+                            <i data-lucide="user" class="w-3.5 h-3.5 text-indigo-400"></i> Visitor Question:
+                        </p>
+                        <div class="p-3 rounded-lg bg-slate-900 text-sm text-slate-200">
+                            {{ chat.user_message }}
+                        </div>
+                    </div>
+
+                    <!-- Bot Reply -->
+                    <div class="space-y-1">
+                        <p class="text-xs font-semibold text-slate-400 flex items-center gap-1">
+                            <i data-lucide="bot" class="w-3.5 h-3.5 text-brand-400"></i> AI Bot Reply (Groq RAG):
+                        </p>
+                        <div class="p-3 rounded-lg bg-brand-950/30 border border-brand-900/40 text-sm text-slate-300 bot-reply-content">
+                            {{ chat.bot_response }}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="text-center py-12 text-slate-500 text-xs">
+                <i data-lucide="message-square-off" class="w-10 h-10 mx-auto text-slate-600 mb-2"></i>
+                No visitor chat logs recorded yet. Share your link <code class="text-brand-300">/{{ user.username }}</code> to start collecting sessions!
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+</div>
+
+<script>
+    function switchTab(tab) {
+        const docsTab = document.getElementById('tab-documents');
+        const chatsTab = document.getElementById('tab-chats');
+        const docsBtn = document.getElementById('tab-docs-btn');
+        const chatsBtn = document.getElementById('tab-chats-btn');
+
+        if (tab === 'documents') {
+            docsTab.classList.remove('hidden');
+            chatsTab.classList.add('hidden');
+            docsBtn.className = "pb-3 border-b-2 border-brand-500 text-brand-400 font-bold text-sm flex items-center gap-2 transition";
+            chatsBtn.className = "pb-3 border-b-2 border-transparent text-slate-400 hover:text-slate-200 font-semibold text-sm flex items-center gap-2 transition";
+        } else {
+            docsTab.classList.add('hidden');
+            chatsTab.classList.remove('hidden');
+            chatsBtn.className = "pb-3 border-b-2 border-brand-500 text-brand-400 font-bold text-sm flex items-center gap-2 transition";
+            docsBtn.className = "pb-3 border-b-2 border-transparent text-slate-400 hover:text-slate-200 font-semibold text-sm flex items-center gap-2 transition";
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        document.querySelectorAll('.bot-reply-content').forEach(el => {
+            const raw = el.textContent.trim();
+            if (raw && typeof marked !== 'undefined' && typeof marked.parse === 'function') {
+                el.innerHTML = marked.parse(raw);
+            }
+        });
+    });
+
+    async function deleteDocument(docId, filename) {
+        if (!confirm(`Are you sure you want to delete "${filename}"?\n\nThis will purge vector embeddings from Pinecone namespace and remove the file from Supabase storage.`)) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/documents/${docId}`, {
+                method: 'DELETE'
+            });
+            const data = await response.json();
+            if (data.success) {
+                const row = document.getElementById(`doc-row-${docId}`);
+                if (row) row.remove();
+                alert('Document successfully deleted from Supabase DB, Supabase Storage, and Pinecone vector namespace!');
+            } else {
+                alert('Failed to delete document: ' + (data.error || 'Unknown error'));
+            }
+        } catch (err) {
+            console.error('Delete error:', err);
+            alert('Error deleting document.');
+        }
+    }
+</script>
+{% endblock %}

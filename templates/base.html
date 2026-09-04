@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-950 text-slate-100">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}BRAINDOCS - AI Document RAG Platform{% endblock %}</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#eef2ff',
+                            100: '#e0e7ff',
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                            900: '#312e81',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Supabase JS & Marked JS Client SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <!-- Custom Stylesheet -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="h-full flex flex-col font-sans antialiased bg-slate-950 text-slate-100 selection:bg-brand-500 selection:text-white">
+
+    <!-- Header / Navigation Bar -->
+    <nav class="sticky top-0 z-40 backdrop-blur-md bg-slate-900/80 border-b border-slate-800">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <!-- Logo -->
+                <div class="flex items-center space-x-3">
+                    <a href="{{ url_for('index') }}" class="flex items-center space-x-2 group">
+                        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-indigo-400 flex items-center justify-center shadow-lg shadow-brand-500/30 group-hover:scale-105 transition-transform">
+                            <i data-lucide="brain-circuit" class="w-6 h-6 text-white"></i>
+                        </div>
+                        <span class="text-xl font-bold tracking-tight bg-gradient-to-r from-white via-slate-200 to-brand-400 bg-clip-text text-transparent">BRAINDOCS</span>
+                    </a>
+                </div>
+
+                <!-- Nav Links -->
+                <div class="flex items-center space-x-4">
+                    {% if user %}
+                        <a href="{{ url_for('dashboard') }}" class="px-3 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-800 transition">
+                            <i data-lucide="layout-dashboard" class="w-4 h-4 inline mr-1"></i> Dashboard
+                        </a>
+                        <a href="{{ url_for('profile') }}" class="px-3 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-800 transition">
+                            <i data-lucide="user" class="w-4 h-4 inline mr-1"></i> Profile & Logs
+                        </a>
+                        {% if user.username %}
+                        <a href="/{{ user.username }}" target="_blank" class="px-3 py-2 rounded-lg text-sm font-medium text-brand-400 bg-brand-500/10 border border-brand-500/20 hover:bg-brand-500/20 transition">
+                            <i data-lucide="external-link" class="w-4 h-4 inline mr-1"></i> My Bot
+                        </a>
+                        {% endif %}
+                        <button onclick="handleSignOut()" class="px-3 py-2 rounded-lg text-sm font-medium text-rose-400 hover:bg-rose-500/10 transition">
+                            <i data-lucide="log-out" class="w-4 h-4 inline mr-1"></i> Sign Out
+                        </button>
+                    {% else %}
+                        <button onclick="handleGoogleSignIn()" class="flex items-center space-x-2 px-4 py-2 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 shadow-md shadow-brand-500/20 hover:shadow-brand-500/40 transition">
+                            <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                                <path d="M12.24 10.285V13.4h6.887c-.58 2.302-2.266 3.993-4.647 3.993-2.906 0-5.263-2.357-5.263-5.263 0-2.906 2.357-5.263 5.263-5.263 1.29 0 2.47.467 3.393 1.238l2.357-2.357C18.666 4.29 16.59 3.5 14.48 3.5 9.52 3.5 5.5 7.52 5.5 12.48s4.02 8.98 8.98 8.98c5.207 0 8.654-3.66 8.654-8.814 0-.584-.055-1.018-.15-1.365h-10.744z"/>
+                            </svg>
+                            <span>Sign in with Google</span>
+                        </button>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Flash Messages Container -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4 w-full">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="p-4 mb-4 rounded-xl border flex items-center justify-between shadow-lg {% if category == 'error' %}bg-rose-950/50 border-rose-800 text-rose-200{% elif category == 'success' %}bg-emerald-950/50 border-emerald-800 text-emerald-200{% else %}bg-slate-900 border-slate-800 text-slate-200{% endif %}">
+                        <div class="flex items-center space-x-3">
+                            <i data-lucide="{% if category == 'error' %}alert-triangle{% elif category == 'success' %}check-circle{% else %}info{% endif %}" class="w-5 h-5"></i>
+                            <span class="text-sm font-medium">{{ message }}</span>
+                        </div>
+                        <button onclick="this.parentElement.remove()" class="text-slate-400 hover:text-white">
+                            <i data-lucide="x" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+    </div>
+
+    <!-- Main Content Area -->
+    <main class="flex-grow">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="mt-auto border-t border-slate-800 bg-slate-900/50 py-6">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-xs text-slate-500">
+            <p>&copy; 2026 BRAINDOCS. Powered by Pinecone Vector DB, Supabase & Groq AI.</p>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script>
+        // Pass server configs to client JS
+        window.SUPABASE_URL = "{{ config.SUPABASE_URL }}";
+        window.SUPABASE_ANON_KEY = "{{ config.SUPABASE_KEY }}";
+    </script>
+    <script src="{{ url_for('static', filename='js/auth.js') }}"></script>
+    <script>
+        lucide.createIcons();
+    </script>
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>
