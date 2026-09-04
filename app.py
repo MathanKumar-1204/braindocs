@@ -256,14 +256,17 @@ def delete_document_route(doc_id):
     return jsonify({"success": True})
 
 
-RESERVED_USERNAMES = {"dashboard", "profile", "onboarding", "auth", "api", "static", "favicon.ico"}
+RESERVED_ROUTES = {"dashboard", "profile", "onboarding"}
+SYSTEM_PATHS = {"api", "static", "favicon.ico", "auth", "index"}
 
 @app.route("/<username>")
 @app.route("/project_link/<username>")
 def public_chatbot(username):
     clean_username = username.strip().lower()
-    if clean_username in RESERVED_USERNAMES:
+    if clean_username in RESERVED_ROUTES:
         return redirect(url_for(clean_username))
+    if clean_username in SYSTEM_PATHS:
+        return "Not Found", 404
     return render_template("chatbot.html", bot_username=clean_username)
 
 
