@@ -8,23 +8,28 @@ logger = logging.getLogger(__name__)
 def generate_groq_rag_response(bot_username: str, visitor_question: str, context_matches: List[Dict[str, Any]]) -> str:
     """
     Combines retrieved context matches from Pinecone RAG with visitor prompt,
-    and calls Groq API to generate an intelligent, context-aware answer.
+    and calls Groq API to generate an intelligent, strict context-aware answer.
     """
     api_key = Config.GROQ_API_KEY
     model = Config.GROQ_MODEL
 
-    # Format context passages
-    if context_matches:
-        context_str = "\n\n".join([
-            f"--- Document Source ({m.get('filename', 'Unknown')}): ---\n{m.get('text', '')}"
-            for m in context_matches if m.get('text')
-        ])
-    else:
-        context_str = "No specific document context found for this query."
+    # Filter matches with valid similarity score
+    meaningful_matches = [m for m in context_matches if m.get("text") and m.get("score", 1.0) > 0.15]
 
-    system_prompt = f"""You are 'BRAINDOCS AI', an intelligent document assistant representing '{bot_username}'.
-Answer the user's question accurately using ONLY the provided context documents below.
-If the context does not contain enough information to answer the question, state politely that the uploaded documents do not contain that information, but offer any helpful high-level insights if relevant.
+    if not meaningful_matches:
+        return f"I'm sorry, but @{bot_username} does not have any uploaded documents containing information about '{visitor_question}'. Please upload a document on the dashboard to get answers."
+
+    context_str = "\n\n".join([
+        f"--- Document Source ({m.get('filename', 'uploaded file')}): ---\n{m.get('text', '')}"
+        for m in meaningful_matches
+    ])
+
+    system_prompt = f"""You are 'BRAINDOCS AI', an intelligent custom document assistant trained strictly on documents uploaded by '@{bot_username}'.
+
+STRICT RULES:
+1. Answer the user's question accurately using ONLY the DOCUMENT CONTEXT provided below.
+2. Do NOT use outside or general world knowledge, and do NOT invent facts not present in the context.
+3. If the context does not contain the answer, reply strictly: "I'm sorry, but @{bot_username}'s uploaded documents do not contain information to answer this question."
 
 DOCUMENT CONTEXT:
 {context_str}
@@ -35,18 +40,13 @@ DOCUMENT CONTEXT:
         {"role": "user", "content": visitor_question}
     ]
 
-    # Check if Groq SDK or HTTP API is used
     if not api_key or "gsk_your_groq" in api_key:
         logger.warning("Groq API Key not configured. Returning mock/default RAG response.")
-        if context_matches:
-            top_source = context_matches[0].get("filename", "uploaded file")
-            top_snippet = context_matches[0].get("text", "")[:300]
-            return f"[BRAINDOCS Demo Response]\n\nBased on your documents (Source: '{top_source}'):\n\n\"{top_snippet}...\"\n\n(To enable live Groq LLM replies, please set a valid GROQ_API_KEY in your .env configuration)."
-        else:
-            return f"Hello! I am {bot_username}'s BRAINDOCS assistant. No specific documents were found matching your query. (Please add a GROQ_API_KEY in .env for full AI generation)."
+        top_source = meaningful_matches[0].get("filename", "uploaded file")
+        top_snippet = meaningful_matches[0].get("text", "")[:300]
+        return f"[BRAINDOCS Demo Response]\n\nBased on your documents (Source: '{top_source}'):\n\n\"{top_snippet}...\"\n\n(To enable live Groq LLM replies, please set a valid GROQ_API_KEY in your .env configuration)."
 
     try:
-        # Groq API endpoint (compatible with OpenAI API standard)
         url = "https://api.groq.com/openai/v1/chat/completions"
         headers = {
             "Authorization": f"Bearer {api_key}",
@@ -55,7 +55,7 @@ DOCUMENT CONTEXT:
         payload = {
             "model": model,
             "messages": messages,
-            "temperature": 0.3,
+            "temperature": 0.2,
             "max_tokens": 800
         }
 

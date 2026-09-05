@@ -320,7 +320,7 @@ def chat_with_bot(username):
     if not user_message:
         return jsonify({"error": "Message body cannot be empty"}), 400
 
-    clean_username = username.strip().lower()
+    clean_username = username.strip().lower().lstrip('@')
 
     try:
         # 1. Embed query question (384-dim vector)
@@ -333,32 +333,24 @@ def chat_with_bot(username):
         private_namespace = f"{clean_username}-private"
         private_matches = pinecone_service.query_vector_namespace(private_namespace, query_vector, top_k=5)
 
-        # Filter meaningful private matches
-        valid_private_matches = [m for m in private_matches if m.get("score", 0) > 0.2]
+        # Filter meaningful matches (similarity score > 0.15)
+        valid_private_matches = [m for m in private_matches if m.get("score", 0) > 0.15]
+        valid_public_matches = [m for m in public_matches if m.get("score", 0) > 0.15]
 
-        authorized_matches = list(public_matches)
+        bot_password = supabase_service.get_bot_private_password(clean_username)
 
-        if valid_private_matches:
-            # Check if visitor provided correct single chatbot private password from profiles table
-            bot_password = supabase_service.get_bot_private_password(clean_username)
-
-            is_authenticated = False
-            if provided_password and bot_password and provided_password == bot_password:
-                is_authenticated = True
-
-            if is_authenticated:
-                # Include private context
-                authorized_matches.extend(valid_private_matches)
+        # Enforce password lock if query matches private documents and password is configured
+        if valid_private_matches and bot_password:
+            is_authenticated = bool(provided_password and provided_password == bot_password)
+            if not is_authenticated:
+                return jsonify({
+                    "reply": f"🔒 **Private Document Locked**: This query matches a private document in namespace `@{clean_username}-private`. Please enter the chatbot password to unlock this answer.",
+                    "requires_password": True
+                })
             else:
-                # If top overall match came from private namespace, require password!
-                top_pub_score = public_matches[0].get("score", 0) if public_matches else 0
-                top_priv_score = valid_private_matches[0].get("score", 0)
-
-                if top_priv_score > top_pub_score:
-                    return jsonify({
-                        "reply": f"🔒 **Private Document Locked**: This query matches a private document in namespace `@{{clean_username}}-private`. Please enter the password to unlock this answer.",
-                        "requires_password": True
-                    })
+                authorized_matches = valid_public_matches + valid_private_matches
+        else:
+            authorized_matches = valid_public_matches
 
         # 4. Generate response using Groq LLM API with authorized context matches
         bot_response = groq_service.generate_groq_rag_response(clean_username, user_message, authorized_matches)
