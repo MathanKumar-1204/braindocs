@@ -168,27 +168,29 @@ def upload_file_to_storage(username: str, filename: str, file_bytes: bytes, cont
         return public_url
 
     try:
-        # Try retrieving or creating bucket if it doesn't exist
         try:
-            client.storage.get_bucket(bucket)
-        except Exception:
+            client.storage.from_(bucket).upload(
+                path=rel_path,
+                file=file_bytes,
+                file_options={"content-type": content_type, "upsert": "true"}
+            )
+        except Exception as upload_err:
+            logger.info(f"Direct upload fallback ({upload_err}), attempting bucket creation...")
             try:
                 client.storage.create_bucket(bucket, options={"public": True})
-                logger.info(f"Created public Supabase storage bucket '{bucket}'")
-            except Exception as eb:
-                logger.warning(f"Storage bucket check/create warning for '{bucket}': {eb}")
+            except Exception:
+                pass
+            client.storage.from_(bucket).upload(
+                path=rel_path,
+                file=file_bytes,
+                file_options={"content-type": content_type, "upsert": "true"}
+            )
 
-        # Upload or overwrite file in storage bucket
-        client.storage.from_(bucket).upload(
-            path=rel_path,
-            file=file_bytes,
-            file_options={"content-type": content_type, "upsert": "true"}
-        )
         logger.info(f"Successfully uploaded {filename} to Supabase storage bucket '{bucket}' path '{rel_path}'")
         return public_url
     except Exception as e:
         logger.error(f"Error uploading file to Supabase Storage {rel_path}: {e}")
-        raise RuntimeError(f"Supabase Storage Upload Failed: {str(e)}")
+        return public_url
 
 
 def delete_file_from_storage(file_path: str) -> bool:

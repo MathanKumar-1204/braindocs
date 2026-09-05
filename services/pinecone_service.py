@@ -15,19 +15,20 @@ def get_pinecone_index():
                 pc = Pinecone(api_key=Config.PINECONE_API_KEY)
                 index_name = Config.PINECONE_INDEX_NAME
 
-                # Ensure index exists or create serverless index (384 dimensions for all-MiniLM-L6-v2)
-                existing_indexes = [idx.name for idx in pc.list_indexes()]
-                if index_name not in existing_indexes:
-                    logger.info(f"Creating Pinecone index: {index_name}")
-                    pc.create_index(
-                        name=index_name,
-                        dimension=384,
-                        metric="cosine",
-                        spec=ServerlessSpec(cloud="aws", region="us-east-1")
-                    )
-
-                _pinecone_index = pc.Index(index_name)
-                logger.info(f"Connected to Pinecone index: {index_name}")
+                try:
+                    _pinecone_index = pc.Index(index_name)
+                    logger.info(f"Connected to Pinecone index: {index_name}")
+                except Exception as e:
+                    logger.info(f"Index check/create fallback for {index_name}: {e}")
+                    existing_indexes = [idx.name for idx in pc.list_indexes()]
+                    if index_name not in existing_indexes:
+                        pc.create_index(
+                            name=index_name,
+                            dimension=384,
+                            metric="cosine",
+                            spec=ServerlessSpec(cloud="aws", region="us-east-1")
+                        )
+                    _pinecone_index = pc.Index(index_name)
             except Exception as e:
                 logger.error(f"Error connecting to Pinecone: {e}")
                 _pinecone_index = None
