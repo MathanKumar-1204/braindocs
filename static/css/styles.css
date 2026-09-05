@@ -1,22 +1,12 @@
 /* BRAINDOCS Custom Stylesheet */
 
-/* Custom Scrollbar */
-::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
+/* Hide scrollbar utility class */
+.no-scrollbar::-webkit-scrollbar {
+    display: none;
 }
-
-::-webkit-scrollbar-track {
-    background: #020617;
-}
-
-::-webkit-scrollbar-thumb {
-    background: #334155;
-    border-radius: 9999px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-    background: #475569;
+.no-scrollbar {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
 }
 
 /* Glassmorphism card effect */
