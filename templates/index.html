@@ -1,81 +1,228 @@
 {% extends "base.html" %}
 
-{% block title %}BRAINDOCS - Build Document Chatbots in Seconds{% endblock %}
+{% block title %}BRAINDOCS - Turn Documents into Custom AI Chatbots{% endblock %}
 
 {% block content %}
-<div class="relative overflow-hidden py-16 sm:py-24">
-    <!-- Glow Effects -->
-    <div class="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-brand-600/20 rounded-full blur-3xl pointer-events-none"></div>
-    <div class="absolute top-1/3 right-1/4 w-80 h-80 bg-indigo-600/15 rounded-full blur-3xl pointer-events-none"></div>
+<div class="relative overflow-hidden pt-4 sm:pt-8 pb-16 space-y-16">
+    <!-- Ambient Background Glow Accents -->
+    <div class="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-gradient-to-tr from-brand-600/25 via-indigo-600/20 to-purple-600/10 rounded-full blur-[120px] pointer-events-none"></div>
+    <div class="absolute top-80 right-10 w-80 h-80 bg-purple-600/10 rounded-full blur-[100px] pointer-events-none"></div>
 
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
-        <!-- Hero Badge -->
-        <div class="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-brand-500/10 border border-brand-500/20 text-brand-400 text-xs font-semibold mb-8">
-            <span class="flex h-2 w-2 rounded-full bg-brand-400 animate-pulse"></span>
-            <span>Pinecone Vector RAG + Groq AI Engine</span>
+    <!-- HERO SECTION -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10 space-y-6 reveal">
+        
+        <!-- Tech Stack Badge -->
+        <div class="inline-flex items-center space-x-2.5 px-4 py-1.5 rounded-full bg-slate-900/90 border border-slate-800 text-brand-400 text-xs font-semibold shadow-xl hover:border-brand-500/40 transition">
+            <span class="flex h-2 w-2 rounded-full bg-emerald-400 animate-ping"></span>
+            <span class="text-slate-300">Powered by</span>
+            <span class="text-brand-300 font-mono">Pinecone Vector RAG</span>
+            <span class="text-slate-500">•</span>
+            <span class="text-indigo-300 font-mono">Groq LLaMA 3.3</span>
         </div>
 
-        <!-- Headline -->
-        <h1 class="text-4xl sm:text-6xl font-extrabold tracking-tight text-white max-w-4xl mx-auto leading-tight">
-            Turn Your Documents into <br>
-            <span class="bg-gradient-to-r from-brand-400 via-indigo-300 to-purple-400 bg-clip-text text-transparent">Interactive Custom AI Chatbots</span>
+        <!-- Animated Headline -->
+        <h1 class="text-4xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight text-white max-w-5xl mx-auto leading-[1.25]">
+            Turn Your Static Documents into <br>
+            <span class="inline-block mt-3 px-5 py-2 rounded-2xl bg-gradient-to-r from-slate-900 via-indigo-950/80 to-slate-900 border border-brand-500/35 shadow-xl shadow-brand-500/20 backdrop-blur-md">
+                <span id="rotating-text" class="text-brand-300 font-extrabold transition-all duration-300 inline-block">
+                    Interactive Custom AI Chatbots
+                </span>
+            </span>
         </h1>
 
         <!-- Subheadline -->
-        <p class="mt-6 text-lg sm:text-xl text-slate-400 max-w-2xl mx-auto">
-            Upload PDFs, Word docs, Text, or CSV files to your own isolated Pinecone vector namespace. Share your personalized chatbot link <code class="text-brand-300 bg-slate-900 px-2 py-0.5 rounded border border-slate-800">/{username}</code> and track visitor conversations.
+        <p class="text-base sm:text-xl text-slate-400 max-w-3xl mx-auto font-normal leading-relaxed">
+            Vectorize PDFs, DOCX, TXT, or CSV spreadsheets into your isolated Pinecone namespace. Share your personal chatbot link <code class="text-brand-300 bg-slate-900/90 px-2 py-0.5 rounded border border-slate-800 font-mono text-sm">/{username}</code> and collect visitor conversation analytics.
         </p>
 
-        <!-- CTA Buttons -->
-        <div class="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
+        <!-- CTA Action Buttons -->
+        <div class="pt-4 flex flex-col sm:flex-row items-center justify-center gap-4">
             {% if user %}
-                <a href="{{ url_for('dashboard') }}" class="w-full sm:w-auto px-8 py-3.5 rounded-xl font-bold text-white bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 shadow-xl shadow-brand-500/25 transition-all transform hover:-translate-y-0.5">
-                    Go to Your Dashboard
+                <a href="{{ url_for('dashboard') }}" class="w-full sm:w-auto px-8 py-4 rounded-xl font-bold text-white bg-gradient-to-r from-brand-600 via-indigo-600 to-purple-600 hover:from-brand-500 hover:to-purple-500 shadow-xl shadow-brand-500/25 hover:shadow-brand-500/40 transition-all transform hover:-translate-y-0.5 flex items-center justify-center gap-2">
+                    <i data-lucide="sparkles" class="w-5 h-5"></i> Go to Your Dashboard
                 </a>
             {% else %}
-                <button onclick="handleGoogleSignIn()" class="w-full sm:w-auto px-8 py-3.5 rounded-xl font-bold text-white bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 shadow-xl shadow-brand-500/25 transition-all transform hover:-translate-y-0.5 flex items-center justify-center space-x-3">
+                <button onclick="handleGoogleSignIn()" class="w-full sm:w-auto px-8 py-4 rounded-xl font-bold text-white bg-gradient-to-r from-brand-600 via-indigo-600 to-purple-600 hover:from-brand-500 hover:to-purple-500 shadow-xl shadow-brand-500/25 hover:shadow-brand-500/40 transition-all transform hover:-translate-y-0.5 flex items-center justify-center space-x-3">
                     <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24">
                         <path d="M12.24 10.285V13.4h6.887c-.58 2.302-2.266 3.993-4.647 3.993-2.906 0-5.263-2.357-5.263-5.263 0-2.906 2.357-5.263 5.263-5.263 1.29 0 2.47.467 3.393 1.238l2.357-2.357C18.666 4.29 16.59 3.5 14.48 3.5 9.52 3.5 5.5 7.52 5.5 12.48s4.02 8.98 8.98 8.98c5.207 0 8.654-3.66 8.654-8.814 0-.584-.055-1.018-.15-1.365h-10.744z"/>
                     </svg>
-                    <span>Get Started with Google OAuth</span>
+                    <span>Get Started Free with Google</span>
                 </button>
             {% endif %}
+            <a href="#how-it-works" class="w-full sm:w-auto px-6 py-4 rounded-xl font-semibold text-slate-300 bg-slate-900 border border-slate-800 hover:border-slate-700 hover:text-white transition flex items-center justify-center gap-2">
+                <i data-lucide="play-circle" class="w-4 h-4 text-brand-400"></i> See How It Works
+            </a>
         </div>
 
-        <!-- File Type Badges -->
-        <div class="mt-12 flex flex-wrap items-center justify-center gap-3 text-xs font-semibold text-slate-400">
-            <span class="px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 flex items-center gap-1.5"><i data-lucide="file-text" class="w-4 h-4 text-red-400"></i> PDF Documents</span>
-            <span class="px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 flex items-center gap-1.5"><i data-lucide="file-text" class="w-4 h-4 text-blue-400"></i> DOCX Files</span>
-            <span class="px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 flex items-center gap-1.5"><i data-lucide="file-text" class="w-4 h-4 text-slate-400"></i> TXT Plain Text</span>
-            <span class="px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 flex items-center gap-1.5"><i data-lucide="table" class="w-4 h-4 text-emerald-400"></i> CSV Spreadsheets</span>
+        <!-- File Format Badges -->
+        <div class="pt-6 flex flex-wrap items-center justify-center gap-3 text-xs font-semibold text-slate-400">
+            <span class="px-3.5 py-1.5 rounded-xl bg-slate-900/90 border border-slate-800 flex items-center gap-1.5 shadow-sm"><i data-lucide="file-text" class="w-4 h-4 text-rose-400"></i> PDF Documents</span>
+            <span class="px-3.5 py-1.5 rounded-xl bg-slate-900/90 border border-slate-800 flex items-center gap-1.5 shadow-sm"><i data-lucide="file-type" class="w-4 h-4 text-blue-400"></i> DOCX Word Files</span>
+            <span class="px-3.5 py-1.5 rounded-xl bg-slate-900/90 border border-slate-800 flex items-center gap-1.5 shadow-sm"><i data-lucide="file-code-2" class="w-4 h-4 text-slate-300"></i> TXT Plain Text</span>
+            <span class="px-3.5 py-1.5 rounded-xl bg-slate-900/90 border border-slate-800 flex items-center gap-1.5 shadow-sm"><i data-lucide="table" class="w-4 h-4 text-emerald-400"></i> CSV Spreadsheets</span>
         </div>
+    </div>
 
-        <!-- How It Works Feature Cards -->
-        <div class="mt-20 grid grid-cols-1 md:grid-cols-3 gap-8 text-left">
-            <div class="p-6 rounded-2xl bg-slate-900/60 border border-slate-800 hover:border-brand-500/40 transition group">
-                <div class="w-12 h-12 rounded-xl bg-brand-500/10 border border-brand-500/20 text-brand-400 flex items-center justify-center mb-5 group-hover:scale-110 transition-transform">
-                    <i data-lucide="fingerprint" class="w-6 h-6"></i>
+    <!-- INTERACTIVE DEMO PREVIEW MOCKUP -->
+    <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 reveal">
+        <div class="p-2 sm:p-4 rounded-3xl bg-slate-900/90 border border-slate-800/80 shadow-2xl shadow-brand-500/10">
+            <div class="rounded-2xl bg-slate-950 border border-slate-800/60 overflow-hidden shadow-inner">
+                <!-- Mock Window Header Bar -->
+                <div class="bg-slate-900/90 px-4 py-3 border-b border-slate-800 flex items-center justify-between">
+                    <div class="flex items-center space-x-2">
+                        <span class="w-3 h-3 rounded-full bg-rose-500/80"></span>
+                        <span class="w-3 h-3 rounded-full bg-amber-500/80"></span>
+                        <span class="w-3 h-3 rounded-full bg-emerald-500/80"></span>
+                        <span class="ml-2 text-xs font-mono text-slate-400 hidden sm:inline">braindocs.app/demo-bot</span>
+                    </div>
+                    <div class="flex items-center space-x-2 text-xs font-mono text-brand-400 bg-brand-500/10 px-2.5 py-0.5 rounded border border-brand-500/20">
+                        <i data-lucide="bot" class="w-3.5 h-3.5"></i>
+                        <span>Pinecone Namespace: @mathan</span>
+                    </div>
                 </div>
-                <h3 class="text-lg font-bold text-white">1. Unique Namespace</h3>
-                <p class="mt-2 text-sm text-slate-400">Create a custom username. Your documents are stored in a dedicated Pinecone vector namespace and isolated Supabase storage folder.</p>
-            </div>
 
-            <div class="p-6 rounded-2xl bg-slate-900/60 border border-slate-800 hover:border-brand-500/40 transition group">
-                <div class="w-12 h-12 rounded-xl bg-brand-500/10 border border-brand-500/20 text-brand-400 flex items-center justify-center mb-5 group-hover:scale-110 transition-transform">
-                    <i data-lucide="upload-cloud" class="w-6 h-6"></i>
-                </div>
-                <h3 class="text-lg font-bold text-white">2. Automatic RAG Embeddings</h3>
-                <p class="mt-2 text-sm text-slate-400">Upload your docs. BRAINDOCS extracts, chunks, and indexes text into 384-dim dense vectors for instant semantic lookup.</p>
-            </div>
+                <!-- Chat Simulation Window -->
+                <div class="p-4 sm:p-6 space-y-4 text-xs sm:text-sm font-sans">
+                    <!-- User Prompt -->
+                    <div class="flex items-start space-x-3">
+                        <div class="w-8 h-8 rounded-full bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400 font-bold text-xs">U</div>
+                        <div class="flex-1 bg-slate-900 p-3.5 rounded-2xl border border-slate-800 text-slate-200">
+                            What are the key terms in the knowledge base document uploaded under your namespace?
+                        </div>
+                    </div>
 
-            <div class="p-6 rounded-2xl bg-slate-900/60 border border-slate-800 hover:border-brand-500/40 transition group">
-                <div class="w-12 h-12 rounded-xl bg-brand-500/10 border border-brand-500/20 text-brand-400 flex items-center justify-center mb-5 group-hover:scale-110 transition-transform">
-                    <i data-lucide="bot" class="w-6 h-6"></i>
+                    <!-- Bot Response -->
+                    <div class="flex items-start space-x-3">
+                        <div class="w-8 h-8 rounded-full bg-brand-600/30 border border-brand-500/40 flex items-center justify-center text-brand-400">
+                            <i data-lucide="bot" class="w-4 h-4"></i>
+                        </div>
+                        <div class="flex-1 bg-brand-950/20 p-4 rounded-2xl border border-brand-900/40 text-slate-300 space-y-2">
+                            <div class="flex items-center justify-between text-xs text-brand-400 border-b border-brand-900/40 pb-1.5 font-mono">
+                                <span><i data-lucide="zap" class="w-3 h-3 inline"></i> Groq RAG Engine (384-dim Dense Search)</span>
+                                <span class="text-emerald-400">Match Confidence: 98.4%</span>
+                            </div>
+                            <p>Based on your vectorized document <code class="text-brand-300">Sample_Knowledge_Base.pdf</code> stored in Pinecone namespace <code class="text-brand-300">mathan</code>:</p>
+                            <ul class="list-disc pl-4 space-y-1 text-slate-400">
+                                <li><strong>Namespace Isolation</strong>: Vector chunks are strictly partitioned by username.</li>
+                                <li><strong>Public vs Private</strong>: Public docs answer any visitor query; Private docs require your Chatbot Password.</li>
+                            </ul>
+                        </div>
+                    </div>
                 </div>
-                <h3 class="text-lg font-bold text-white">3. Shareable AI Chatbot</h3>
-                <p class="mt-2 text-sm text-slate-400">Share <code class="text-brand-300">/{username}</code>. Visitors provide their email and chat with your AI bot powered by Groq.</p>
             </div>
         </div>
     </div>
+
+    <!-- HOW IT WORKS STEP-BY-STEP -->
+    <div id="how-it-works" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
+        <div class="text-center space-y-3 reveal">
+            <h2 class="text-3xl sm:text-4xl font-extrabold text-white">How BRAINDOCS Works</h2>
+            <p class="text-sm sm:text-base text-slate-400 max-w-2xl mx-auto">Three simple steps from uploading your files to embedding a custom AI chatbot for your visitors.</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div class="p-8 rounded-3xl bg-slate-900/60 border border-slate-800 hover:border-brand-500/40 transition-all duration-300 group shadow-xl hover:-translate-y-1 reveal">
+                <div class="w-14 h-14 rounded-2xl bg-brand-500/10 border border-brand-500/20 text-brand-400 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                    <i data-lucide="fingerprint" class="w-7 h-7"></i>
+                </div>
+                <div class="text-xs font-mono text-brand-400 font-bold uppercase tracking-wider mb-1">Step 01</div>
+                <h3 class="text-xl font-bold text-white">Personal Namespace</h3>
+                <p class="mt-2 text-sm text-slate-400 leading-relaxed">Claim your unique username. Your documents are stored safely in an isolated Pinecone vector namespace and Supabase Storage bucket.</p>
+            </div>
+
+            <div class="p-8 rounded-3xl bg-slate-900/60 border border-slate-800 hover:border-brand-500/40 transition-all duration-300 group shadow-xl hover:-translate-y-1 reveal">
+                <div class="w-14 h-14 rounded-2xl bg-brand-500/10 border border-brand-500/20 text-brand-400 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                    <i data-lucide="cpu" class="w-7 h-7"></i>
+                </div>
+                <div class="text-xs font-mono text-brand-400 font-bold uppercase tracking-wider mb-1">Step 02</div>
+                <h3 class="text-xl font-bold text-white">Automated Vector RAG</h3>
+                <p class="mt-2 text-sm text-slate-400 leading-relaxed">Upload PDFs, DOCX, TXT, or CSVs. BRAINDOCS extracts, chunks into 150-word passages, and converts text into 384-dimensional dense vectors.</p>
+            </div>
+
+            <div class="p-8 rounded-3xl bg-slate-900/60 border border-slate-800 hover:border-brand-500/40 transition-all duration-300 group shadow-xl hover:-translate-y-1 reveal">
+                <div class="w-14 h-14 rounded-2xl bg-brand-500/10 border border-brand-500/20 text-brand-400 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                    <i data-lucide="share-2" class="w-7 h-7"></i>
+                </div>
+                <div class="text-xs font-mono text-brand-400 font-bold uppercase tracking-wider mb-1">Step 03</div>
+                <h3 class="text-xl font-bold text-white">Share Chatbot Link</h3>
+                <p class="mt-2 text-sm text-slate-400 leading-relaxed">Share your unique chatbot link <code class="text-brand-300">/{username}</code>. Visitors log in with Google OAuth to query your document bot and logs are tracked in your profile.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- STATS / BENCHMARK COUNTER -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 reveal">
+        <div class="p-8 sm:p-12 rounded-3xl bg-gradient-to-r from-slate-900 via-indigo-950/40 to-slate-900 border border-slate-800 grid grid-cols-2 md:grid-cols-4 gap-8 text-center shadow-2xl">
+            <div>
+                <div class="text-3xl sm:text-4xl font-extrabold text-white font-mono">384d</div>
+                <div class="text-xs text-slate-400 uppercase tracking-wider mt-1">Dense Embeddings</div>
+            </div>
+            <div>
+                <div class="text-3xl sm:text-4xl font-extrabold text-brand-400 font-mono">&lt; 500ms</div>
+                <div class="text-xs text-slate-400 uppercase tracking-wider mt-1">Groq AI Inference</div>
+            </div>
+            <div>
+                <div class="text-3xl sm:text-4xl font-extrabold text-indigo-400 font-mono">100%</div>
+                <div class="text-xs text-slate-400 uppercase tracking-wider mt-1">Namespace Isolated</div>
+            </div>
+            <div>
+                <div class="text-3xl sm:text-4xl font-extrabold text-purple-400 font-mono">0 MB</div>
+                <div class="text-xs text-slate-400 uppercase tracking-wider mt-1">PyTorch RAM Footprint</div>
+            </div>
+        </div>
+    </div>
+
 </div>
+
+<!-- Scroll Reveal & Animated Text Script -->
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // Rotating text array
+        const phrases = [
+            "Interactive Custom AI Chatbots",
+            "Instant Answer Engines",
+            "Smart RAG Knowledge Bases",
+            "Secure Pinecone Workspaces"
+        ];
+        let idx = 0;
+        const target = document.getElementById('rotating-text');
+
+        setInterval(() => {
+            idx = (idx + 1) % phrases.length;
+            if (target) {
+                target.style.opacity = '0.2';
+                target.style.transform = 'translateY(6px)';
+                setTimeout(() => {
+                    target.textContent = phrases[idx];
+                    target.style.opacity = '1';
+                    target.style.transform = 'translateY(0)';
+                }, 200);
+            }
+        }, 3200);
+
+        // Scroll Intersection Observer Reveal
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('active');
+                }
+            });
+        }, { threshold: 0.1 });
+
+        document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+    });
+</script>
+
+<style>
+    .reveal {
+        opacity: 0;
+        transform: translateY(24px);
+        transition: opacity 0.7s ease-out, transform 0.7s ease-out;
+    }
+    .reveal.active {
+        opacity: 1;
+        transform: translateY(0);
+    }
+</style>
 {% endblock %}
+

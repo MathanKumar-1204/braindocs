@@ -22,9 +22,12 @@
             }
         }
     </script>
-    <!-- Lucide Icons & Marked JS -->
+    <!-- Lucide Icons, Marked JS & html2pdf -->
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <!-- Supabase JS Client SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
 </head>
 <body class="h-full flex flex-col font-sans bg-slate-950 text-slate-100">
@@ -43,15 +46,20 @@
                             <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 mr-1 animate-pulse"></span> Online
                         </span>
                     </h1>
-                    <p class="text-[11px] text-slate-400">Powered by Pinecone RAG & Groq LLM</p>
                 </div>
             </div>
 
-            <!-- Visitor Email Display/Change Pill -->
-            <div id="visitor-email-badge" class="flex items-center space-x-2 bg-slate-950 px-3 py-1.5 rounded-xl border border-slate-800 text-xs">
-                <i data-lucide="mail" class="w-3.5 h-3.5 text-brand-400"></i>
-                <span id="visitor-email-display" class="font-mono text-slate-300">Not set</span>
-                <button onclick="changeVisitorEmail()" class="text-[10px] text-brand-400 hover:underline ml-1">Change</button>
+            <div class="flex items-center space-x-3">
+                <button onclick="downloadCurrentChatPDF()" class="px-3.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-200 text-xs font-semibold border border-slate-800 transition flex items-center gap-1.5 shadow-sm">
+                    <i data-lucide="download" class="w-3.5 h-3.5 text-brand-400"></i>
+                    <span>Download Chat PDF</span>
+                </button>
+                <!-- Visitor Account Status Pill -->
+                <div id="visitor-account-badge" class="flex items-center space-x-2 bg-slate-950 px-3 py-1.5 rounded-xl border border-slate-800 text-xs">
+                    <i data-lucide="user" class="w-3.5 h-3.5 text-brand-400"></i>
+                    <span id="visitor-email-display" class="font-mono text-slate-300">Checking auth...</span>
+                    <button id="signout-btn" onclick="handleSignOut()" class="text-[10px] text-rose-400 hover:underline hidden ml-1">Sign Out</button>
+                </div>
             </div>
         </div>
     </header>
@@ -71,31 +79,35 @@
 
     <!-- Typing Indicator -->
     <div id="typing-indicator" class="hidden max-w-4xl w-full mx-auto px-6 pb-2">
-        <div class="flex items-center space-x-2 text-xs text-slate-400 bg-slate-900/60 w-fit px-3 py-1.5 rounded-xl border border-slate-800">
-            <i data-lucide="loader-2" class="w-3.5 h-3.5 animate-spin text-brand-400"></i>
-            <span>Searching Pinecone vectors & querying Groq LLM...</span>
+        <div class="flex items-center space-x-2 text-xs text-slate-400 bg-slate-900/80 w-fit px-3.5 py-2 rounded-xl border border-slate-800 shadow-md">
+            <div class="flex items-center space-x-1">
+                <span class="w-1.5 h-1.5 rounded-full bg-brand-400 animate-bounce" style="animation-delay: 0ms"></span>
+                <span class="w-1.5 h-1.5 rounded-full bg-brand-400 animate-bounce" style="animation-delay: 150ms"></span>
+                <span class="w-1.5 h-1.5 rounded-full bg-brand-400 animate-bounce" style="animation-delay: 300ms"></span>
+            </div>
+            <span class="font-medium text-slate-300 ml-1">Replying...</span>
         </div>
     </div>
 
-    <!-- Visitor Email Prompt Modal (Required before first message) -->
-    <div id="email-modal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
-        <div class="max-w-md w-full bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-2xl space-y-4">
-            <div class="text-center">
-                <div class="w-12 h-12 rounded-xl bg-brand-500/10 text-brand-400 border border-brand-500/20 flex items-center justify-center mx-auto mb-3">
-                    <i data-lucide="mail-check" class="w-6 h-6"></i>
-                </div>
-                <h3 class="text-lg font-bold text-white">Enter Your Email Address</h3>
-                <p class="text-xs text-slate-400 mt-1">Please enter your email so <strong>@{{ bot_username }}</strong> knows who interacted with their AI chatbot.</p>
+    <!-- Google OAuth Login Overlay Modal (Shown if visitor is not signed in) -->
+    <div id="auth-modal" class="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4">
+        <div class="max-w-md w-full bg-slate-900 border border-slate-800 p-8 rounded-2xl shadow-2xl space-y-6 text-center">
+            <div class="w-14 h-14 rounded-2xl bg-gradient-to-tr from-brand-600 to-indigo-500 text-white border border-brand-400/30 flex items-center justify-center mx-auto shadow-lg shadow-brand-500/20">
+                <i data-lucide="bot" class="w-7 h-7"></i>
+            </div>
+            <div>
+                <h3 class="text-xl font-bold text-white">Sign in to Chat</h3>
+                <p class="text-xs text-slate-400 mt-2">
+                    Please sign in with Google to start chatting with <strong>@{{ bot_username }}</strong>'s document assistant. Your conversation history will be saved in your session.
+                </p>
             </div>
 
-            <form id="email-form" onsubmit="saveVisitorEmail(event)" class="space-y-4">
-                <div>
-                    <input type="email" id="visitor-email-input" required class="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-white placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" placeholder="your.name@example.com">
-                </div>
-                <button type="submit" class="w-full py-3 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-bold text-sm shadow-md shadow-brand-500/20 transition">
-                    Start Chatting
-                </button>
-            </form>
+            <button onclick="handleGoogleSignIn()" class="w-full py-3.5 px-4 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 shadow-xl shadow-brand-500/25 transition flex items-center justify-center space-x-3">
+                <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24">
+                    <path d="M12.24 10.285V13.4h6.887c-.58 2.302-2.266 3.993-4.647 3.993-2.906 0-5.263-2.357-5.263-5.263 0-2.906 2.357-5.263 5.263-5.263 1.29 0 2.47.467 3.393 1.238l2.357-2.357C18.666 4.29 16.59 3.5 14.48 3.5 9.52 3.5 5.5 7.52 5.5 12.48s4.02 8.98 8.98 8.98c5.207 0 8.654-3.66 8.654-8.814 0-.584-.055-1.018-.15-1.365h-10.744z"/>
+                </svg>
+                <span>Sign in with Google</span>
+            </button>
         </div>
     </div>
 
@@ -112,56 +124,99 @@
         </div>
     </footer>
 
+    <!-- Pass Server Configuration to Client -->
+    <script>
+        window.SUPABASE_URL = "{{ config.SUPABASE_URL }}";
+        window.SUPABASE_ANON_KEY = "{{ config.SUPABASE_KEY }}";
+        const botUsername = "{{ bot_username }}";
+        const serverUserEmail = "{{ user.email if user else '' }}";
+    </script>
+    <script src="{{ url_for('static', filename='js/auth.js') }}"></script>
     <script>
         lucide.createIcons();
-        const botUsername = "{{ bot_username }}";
-        const emailModal = document.getElementById('email-modal');
-        const emailInput = document.getElementById('visitor-email-input');
+
+        const authModal = document.getElementById('auth-modal');
         const emailDisplay = document.getElementById('visitor-email-display');
+        const signoutBtn = document.getElementById('signout-btn');
         const chatContainer = document.getElementById('chat-container');
         const typingIndicator = document.getElementById('typing-indicator');
 
-        // Check if visitor email saved in session
-        let visitorEmail = sessionStorage.getItem('visitor_email');
-        if (visitorEmail) {
-            emailDisplay.textContent = visitorEmail;
-            emailModal.classList.add('hidden');
+        let visitorEmail = serverUserEmail || null;
+
+        // Session ID management per bot (stored in localStorage)
+        let sessionId = localStorage.getItem(`braindocs_session_${botUsername}`);
+        if (!sessionId) {
+            sessionId = 'sess_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9);
+            localStorage.setItem(`braindocs_session_${botUsername}`, sessionId);
         }
 
-        function saveVisitorEmail(e) {
-            e.preventDefault();
-            const email = emailInput.value.trim();
-            if (email) {
-                visitorEmail = email;
-                sessionStorage.setItem('visitor_email', visitorEmail);
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Check Supabase JS auth session if serverUserEmail is missing
+            if (!visitorEmail && window.SUPABASE_URL && window.SUPABASE_ANON_KEY && window.SUPABASE_URL.includes("https://")) {
+                try {
+                    const client = supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
+                    const { data: { session } } = await client.auth.getSession();
+                    if (session && session.user) {
+                        visitorEmail = session.user.email;
+                    }
+                } catch (e) {
+                    console.error("Auth session check error:", e);
+                }
+            }
+
+            if (visitorEmail) {
+                // Visitor authenticated
                 emailDisplay.textContent = visitorEmail;
-                emailModal.classList.add('hidden');
+                signoutBtn.classList.remove('hidden');
+                authModal.classList.add('hidden');
+                // Load historical chat messages for this session
+                await loadChatHistory();
+            } else {
+                // Show Google OAuth login modal
+                emailDisplay.textContent = "Guest (Sign in required)";
+                authModal.classList.remove('hidden');
+            }
+        });
+
+        async function loadChatHistory() {
+            if (!visitorEmail) return;
+
+            try {
+                const res = await fetch(`/api/chat/${botUsername}/history?session_id=${sessionId}&visitor_email=${encodeURIComponent(visitorEmail)}`);
+                const data = await res.json();
+                if (data.history && data.history.length > 0) {
+                    data.history.forEach(item => {
+                        appendUserMessage(item.user_message);
+                        appendBotMessage(item.bot_response);
+                    });
+                }
+            } catch (err) {
+                console.error("Failed to load chat history:", err);
             }
         }
 
-        function changeVisitorEmail() {
-            emailInput.value = visitorEmail || '';
-            emailModal.classList.remove('hidden');
-        }
+        let savedPrivatePassword = sessionStorage.getItem(`braindocs_pass_${botUsername}`) || '';
 
-        async function handleSendMessage(e) {
-            e.preventDefault();
+        async function handleSendMessage(e, customMessage = null, overridePassword = null) {
+            if (e) e.preventDefault();
             if (!visitorEmail) {
-                emailModal.classList.remove('hidden');
+                authModal.classList.remove('hidden');
                 return;
             }
 
             const inputField = document.getElementById('user-input');
-            const message = inputField.value.trim();
+            const message = customMessage || inputField.value.trim();
             if (!message) return;
 
-            // Render User Message
-            appendUserMessage(message);
-            inputField.value = '';
+            if (!customMessage) {
+                appendUserMessage(message);
+                inputField.value = '';
+            }
 
-            // Show Typing Indicator
             typingIndicator.classList.remove('hidden');
             chatContainer.scrollTop = chatContainer.scrollHeight;
+
+            const passToUse = overridePassword || savedPrivatePassword;
 
             try {
                 const response = await fetch(`/api/chat/${botUsername}`, {
@@ -169,14 +224,18 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         visitor_email: visitorEmail,
-                        message: message
+                        session_id: sessionId,
+                        message: message,
+                        private_password: passToUse
                     })
                 });
 
                 const data = await response.json();
                 typingIndicator.classList.add('hidden');
 
-                if (data.reply) {
+                if (data.requires_password) {
+                    appendPasswordUnlockCard(message);
+                } else if (data.reply) {
                     appendBotMessage(data.reply);
                 } else {
                     appendBotMessage('Sorry, I could not generate a response. ' + (data.error || ''));
@@ -186,6 +245,49 @@
                 typingIndicator.classList.add('hidden');
                 appendBotMessage('An error occurred while connecting to the AI server.');
             }
+        }
+
+        function appendPasswordUnlockCard(originalMessage) {
+            const cardId = 'pass-card-' + Date.now();
+            const div = document.createElement('div');
+            div.className = 'flex items-start space-x-3';
+            div.id = cardId;
+            div.innerHTML = `
+                <div class="w-8 h-8 rounded-lg bg-rose-600 flex items-center justify-center text-white flex-shrink-0 mt-0.5">
+                    <i data-lucide="lock" class="w-4 h-4"></i>
+                </div>
+                <div class="p-4 rounded-2xl rounded-tl-none bg-slate-900 border border-rose-900/50 max-w-xl text-sm text-slate-200 shadow-xl space-y-3">
+                    <div class="flex items-center space-x-2 text-rose-400 font-bold text-xs">
+                        <i data-lucide="shield-alert" class="w-4 h-4"></i>
+                        <span>Private Document Locked</span>
+                    </div>
+                    <p class="text-xs text-slate-300">This query matches a <strong>private document</strong> in namespace <code class="text-brand-300">@${botUsername}-private</code>. Please enter the password to unlock this answer:</p>
+                    <div class="flex items-center space-x-2">
+                        <input type="password" id="input-${cardId}" placeholder="Enter password..." class="flex-grow px-3 py-2 bg-slate-950 border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:ring-2 focus:ring-brand-500">
+                        <button onclick="unlockPrivateContent('${cardId}', '${escapeHtml(originalMessage)}')" class="px-4 py-2 bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 text-white rounded-lg text-xs font-bold shadow-md transition">
+                            Unlock
+                        </button>
+                    </div>
+                </div>
+            `;
+            chatContainer.appendChild(div);
+            lucide.createIcons();
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        function unlockPrivateContent(cardId, originalMessage) {
+            const passInput = document.getElementById(`input-${cardId}`);
+            const pass = passInput ? passInput.value.trim() : '';
+            if (!pass) return;
+
+            savedPrivatePassword = pass;
+            sessionStorage.setItem(`braindocs_pass_${botUsername}`, pass);
+
+            // Remove card and retry message with password
+            const cardEl = document.getElementById(cardId);
+            if (cardEl) cardEl.remove();
+
+            handleSendMessage(null, originalMessage, pass);
         }
 
         function appendUserMessage(text) {
@@ -234,6 +336,77 @@
 
         function escapeHtml(str) {
             return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+        }
+
+        function downloadCurrentChatPDF() {
+            const container = document.getElementById('chat-container');
+            if (!container) return;
+
+            const element = document.createElement('div');
+            element.style.padding = '24px';
+            element.style.backgroundColor = '#090d16';
+            element.style.color = '#e2e8f0';
+            element.style.fontFamily = 'sans-serif';
+
+            let html = `
+                <div style="border-bottom: 2px solid #334155; padding-bottom: 14px; margin-bottom: 20px;">
+                    <h2 style="font-size: 20px; font-weight: bold; color: #ffffff; margin: 0;">@${botUsername}'s AI Chatbot Transcript</h2>
+                    <p style="font-size: 11px; color: #94a3b8; margin-top: 6px;">
+                        <strong>Visitor:</strong> ${visitorEmail || 'Guest'}<br/>
+                        <strong>Session ID:</strong> ${sessionId}<br/>
+                        <strong>Export Date:</strong> ${new Date().toLocaleString()}
+                    </p>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 16px;">
+            `;
+
+            const messageNodes = container.children;
+            let count = 0;
+            for (let node of messageNodes) {
+                const textContent = node.innerText.trim();
+                if (!textContent) continue;
+
+                const isUser = node.querySelector('.bg-brand-600') && node.classList.contains('justify-end');
+                if (isUser) {
+                    html += `
+                        <div style="margin-bottom: 14px;">
+                            <div style="background-color: #4f46e5; color: #ffffff; padding: 10px 14px; border-radius: 10px; font-size: 12px; margin-bottom: 6px; width: fit-content; max-width: 85%; margin-left: auto;">
+                                <strong>Visitor:</strong> ${escapeHtml(textContent)}
+                            </div>
+                        </div>
+                    `;
+                    count++;
+                } else {
+                    const replyContent = node.querySelector('.markdown-body') ? node.querySelector('.markdown-body').innerHTML : escapeHtml(textContent);
+                    html += `
+                        <div style="margin-bottom: 14px;">
+                            <div style="background-color: #0f172a; color: #cbd5e1; border: 1px solid #1e293b; padding: 10px 14px; border-radius: 10px; font-size: 12px; max-width: 90%;">
+                                <strong style="color: #818cf8;">AI Assistant:</strong><br/>
+                                ${replyContent}
+                            </div>
+                        </div>
+                    `;
+                    count++;
+                }
+            }
+
+            if (count === 0) {
+                alert('No messages available to export in PDF.');
+                return;
+            }
+
+            html += `</div>`;
+            element.innerHTML = html;
+
+            const opt = {
+                margin:       [0.4, 0.4, 0.4, 0.4],
+                filename:     `Chat_Transcript_@${botUsername}_${sessionId}.pdf`,
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { scale: 2, backgroundColor: '#090d16' },
+                jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
+            };
+
+            html2pdf().set(opt).from(element).save();
         }
     </script>
 </body>

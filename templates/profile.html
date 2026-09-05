@@ -14,10 +14,7 @@
             <div>
                 <h1 class="text-2xl font-bold text-white">@{{ user.username }}</h1>
                 <p class="text-xs text-slate-400 font-mono mt-0.5">{{ user.email }}</p>
-                <div class="flex items-center space-x-3 mt-2 text-xs text-slate-400">
-                    <span class="flex items-center gap-1"><i data-lucide="database" class="w-3.5 h-3.5 text-brand-400"></i> Pinecone NS: <strong class="text-slate-200">{{ user.username }}</strong></span>
-                    <span class="flex items-center gap-1"><i data-lucide="folder" class="w-3.5 h-3.5 text-brand-400"></i> Bucket: <strong class="text-slate-200">{{ user.username }}/</strong></span>
-                </div>
+
             </div>
         </div>
 
@@ -28,17 +25,60 @@
         </div>
     </div>
 
+    <!-- Chatbot Security / Private Password Setting Card -->
+    <div class="p-6 rounded-2xl bg-slate-900/80 border border-slate-800 shadow-xl space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-800 pb-4 gap-4">
+            <div>
+                <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                    <i data-lucide="shield-lock" class="w-5 h-5 text-brand-400"></i>
+                    Chatbot Private Password Security
+                </h2>
+                <p class="text-xs text-slate-400 mt-1">Set or update the single private password for your chatbot <code class="text-brand-300">@{{ user.username }}</code>. Visitors must enter this password to unlock private document context.</p>
+            </div>
+            <div id="pass-status-badge">
+                {% if bot_password %}
+                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                    <i data-lucide="shield-check" class="w-4 h-4"></i> Password Active
+                </span>
+                {% else %}
+                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                    <i data-lucide="shield-alert" class="w-4 h-4"></i> No Password Set
+                </span>
+                {% endif %}
+            </div>
+        </div>
+
+        <form id="bot-password-form" onsubmit="handlePasswordSubmit(event)" class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+            <div class="relative flex-1">
+                <input type="password" id="bot-password-input" value="{{ bot_password or '' }}" placeholder="Enter single chatbot private password..." autocomplete="new-password" class="w-full pl-4 pr-10 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white text-xs font-mono focus:outline-none focus:ring-2 focus:ring-brand-500">
+                <button type="button" onclick="togglePassVisibility()" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white transition">
+                    <i id="pass-eye-icon" data-lucide="eye" class="w-4 h-4"></i>
+                </button>
+            </div>
+            <div class="flex items-center space-x-2">
+                <button type="submit" id="save-pass-btn" class="px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 shadow-md shadow-brand-500/20 transition flex items-center gap-1.5">
+                    <i data-lucide="save" class="w-3.5 h-3.5"></i> Save Password
+                </button>
+                {% if bot_password %}
+                <button type="button" onclick="removePassword()" class="px-4 py-2.5 rounded-xl text-xs font-semibold text-rose-300 bg-rose-950/60 border border-rose-800/60 hover:bg-rose-900 transition flex items-center gap-1.5">
+                    <i data-lucide="x-circle" class="w-3.5 h-3.5"></i> Remove
+                </button>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+
     <!-- Navigation Tabs -->
     <div class="border-b border-slate-800 flex space-x-8">
         <button id="tab-docs-btn" onclick="switchTab('documents')" class="pb-3 border-b-2 border-brand-500 text-brand-400 font-bold text-sm flex items-center gap-2 transition">
             <i data-lucide="file-text" class="w-4 h-4"></i> Uploaded Documents ({{ documents|length }})
         </button>
         <button id="tab-chats-btn" onclick="switchTab('chats')" class="pb-3 border-b-2 border-transparent text-slate-400 hover:text-slate-200 font-semibold text-sm flex items-center gap-2 transition">
-            <i data-lucide="messages-square" class="w-4 h-4"></i> Visitor Chat Logs ({{ chat_logs|length }})
+            <i data-lucide="messages-square" class="w-4 h-4"></i> Visitor Chat Sessions ({{ chat_sessions|length }})
         </button>
     </div>
 
-    <!-- TAB 1: Document Management (With Deletion from Pinecone & Supabase Storage) -->
+    <!-- TAB 1: Document Management -->
     <div id="tab-documents" class="space-y-4">
         <div class="p-6 rounded-2xl bg-slate-900/80 border border-slate-800 shadow-xl">
             <div class="flex items-center justify-between border-b border-slate-800 pb-4 mb-4">
@@ -47,7 +87,6 @@
                         <i data-lucide="hard-drive" class="w-5 h-5 text-brand-400"></i>
                         Uploaded Files & Vector Index
                     </h2>
-                    <p class="text-xs text-slate-400">Deleting a file removes its raw storage copy from Supabase Storage and purges all vector chunks from your Pinecone namespace.</p>
                 </div>
                 <a href="{{ url_for('dashboard') }}" class="px-3 py-1.5 rounded-xl bg-brand-600 text-white text-xs font-semibold hover:bg-brand-500 transition">
                     + Upload New File
@@ -60,10 +99,10 @@
                     <thead class="bg-slate-950 text-slate-400 uppercase font-semibold">
                         <tr>
                             <th class="px-4 py-3 rounded-l-lg">File Name</th>
+                            <th class="px-4 py-3">Visibility</th>
                             <th class="px-4 py-3">Format</th>
                             <th class="px-4 py-3">Storage Path</th>
                             <th class="px-4 py-3">Size</th>
-                            <th class="px-4 py-3">Chunks</th>
                             <th class="px-4 py-3">Uploaded Date</th>
                             <th class="px-4 py-3 text-right rounded-r-lg">Action</th>
                         </tr>
@@ -75,15 +114,30 @@
                                 <i data-lucide="file-check" class="w-4 h-4 text-emerald-400"></i>
                                 {{ doc.filename }}
                             </td>
+                            <td class="px-4 py-3">
+                                {% if doc.visibility == 'private' %}
+                                <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20" title="Password Protected">
+                                    <i data-lucide="lock" class="w-3 h-3"></i> Private
+                                </span>
+                                {% else %}
+                                <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                                    <i data-lucide="globe" class="w-3 h-3"></i> Public
+                                </span>
+                                {% endif %}
+                            </td>
                             <td class="px-4 py-3 font-mono text-slate-400">{{ doc.file_type|upper }}</td>
-                            <td class="px-4 py-3 font-mono text-xs text-slate-400">{{ doc.file_path }}</td>
+                            <td class="px-4 py-3 font-mono text-xs text-slate-400 max-w-xs truncate" title="{{ doc.file_path }}">{{ doc.file_path }}</td>
                             <td class="px-4 py-3 text-slate-400">{{ (doc.file_size / 1024)|round(1) }} KB</td>
-                            <td class="px-4 py-3 font-mono text-brand-300">{{ doc.chunk_count }} chunks</td>
                             <td class="px-4 py-3 text-slate-400">{{ doc.created_at[:10] if doc.created_at else 'N/A' }}</td>
                             <td class="px-4 py-3 text-right">
-                                <button onclick="deleteDocument('{{ doc.id }}', '{{ doc.filename }}')" class="px-3 py-1.5 rounded-lg text-rose-300 bg-rose-950/60 border border-rose-800/60 hover:bg-rose-900 transition font-semibold flex items-center gap-1 ml-auto">
-                                    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Delete
-                                </button>
+                                <div class="flex items-center justify-end space-x-2">
+                                    <a href="{{ doc.file_path }}" target="_blank" download class="px-3 py-1.5 rounded-lg text-brand-300 bg-brand-950/60 border border-brand-800/60 hover:bg-brand-900 transition font-semibold flex items-center gap-1">
+                                        <i data-lucide="download" class="w-3.5 h-3.5"></i> Download
+                                    </a>
+                                    <button onclick="deleteDocument('{{ doc.id }}', '{{ doc.filename }}')" class="px-3 py-1.5 rounded-lg text-rose-300 bg-rose-950/60 border border-rose-800/60 hover:bg-rose-900 transition font-semibold flex items-center gap-1">
+                                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Delete
+                                    </button>
+                                </div>
                             </td>
                         </tr>
                         {% endfor %}
@@ -99,7 +153,7 @@
         </div>
     </div>
 
-    <!-- TAB 2: Visitor Chat Logs & Sessions -->
+    <!-- TAB 2: Visitor Chat Sessions (Grouped by Session ID) -->
     <div id="tab-chats" class="hidden space-y-4">
         <div class="p-6 rounded-2xl bg-slate-900/80 border border-slate-800 shadow-xl">
             <div class="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-800 pb-4 mb-4 gap-4">
@@ -108,44 +162,49 @@
                         <i data-lucide="users" class="w-5 h-5 text-brand-400"></i>
                         Visitor Chat Sessions & Mail IDs
                     </h2>
-                    <p class="text-xs text-slate-400">Track which email addresses interacted with your chatbot and view their full conversation prompts and responses.</p>
+                    <p class="text-xs text-slate-400">View visitor chat sessions grouped by Session ID. Click "View Full Chat" to view the complete conversation and download PDF transcripts.</p>
                 </div>
             </div>
 
-            {% if chat_logs %}
-            <div class="space-y-4">
-                {% for chat in chat_logs %}
-                <div class="p-4 rounded-xl bg-slate-950 border border-slate-800/80 space-y-3">
-                    <div class="flex items-center justify-between text-xs border-b border-slate-800/60 pb-2">
-                        <div class="flex items-center space-x-2">
-                            <span class="w-2 h-2 rounded-full bg-brand-400"></span>
-                            <span class="font-semibold text-brand-300">Visitor Email:</span>
-                            <span class="font-mono text-white font-bold bg-slate-900 px-2 py-0.5 rounded border border-slate-800">{{ chat.visitor_email }}</span>
-                        </div>
-                        <span class="text-slate-500">{{ chat.created_at[:19] if chat.created_at else 'Recent' }}</span>
-                    </div>
-
-                    <!-- User Message -->
-                    <div class="space-y-1">
-                        <p class="text-xs font-semibold text-slate-400 flex items-center gap-1">
-                            <i data-lucide="user" class="w-3.5 h-3.5 text-indigo-400"></i> Visitor Question:
-                        </p>
-                        <div class="p-3 rounded-lg bg-slate-900 text-sm text-slate-200">
-                            {{ chat.user_message }}
-                        </div>
-                    </div>
-
-                    <!-- Bot Reply -->
-                    <div class="space-y-1">
-                        <p class="text-xs font-semibold text-slate-400 flex items-center gap-1">
-                            <i data-lucide="bot" class="w-3.5 h-3.5 text-brand-400"></i> AI Bot Reply (Groq RAG):
-                        </p>
-                        <div class="p-3 rounded-lg bg-brand-950/30 border border-brand-900/40 text-sm text-slate-300 bot-reply-content">
-                            {{ chat.bot_response }}
-                        </div>
-                    </div>
-                </div>
-                {% endfor %}
+            {% if chat_sessions %}
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-xs text-slate-300">
+                    <thead class="bg-slate-950 text-slate-400 uppercase font-semibold">
+                        <tr>
+                            <th class="px-4 py-3 rounded-l-lg">Visitor Email</th>
+                            <th class="px-4 py-3">Session ID</th>
+                            <th class="px-4 py-3">Total Messages</th>
+                            <th class="px-4 py-3">Last Activity</th>
+                            <th class="px-4 py-3 text-right rounded-r-lg">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-800/60">
+                        {% for sess in chat_sessions %}
+                        <tr class="hover:bg-slate-800/30 transition">
+                            <td class="px-4 py-3 font-semibold text-white flex items-center gap-2">
+                                <i data-lucide="user-check" class="w-4 h-4 text-brand-400"></i>
+                                {{ sess.visitor_email }}
+                            </td>
+                            <td class="px-4 py-3 font-mono text-xs text-brand-300 bg-slate-950/60 px-2 py-1 rounded border border-slate-800/80 w-fit">
+                                {{ sess.session_id }}
+                            </td>
+                            <td class="px-4 py-3 text-slate-300 font-medium">
+                                <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-brand-500/10 text-brand-300 border border-brand-500/20">
+                                    {{ sess.messages|length }} Q&A Pairs
+                                </span>
+                            </td>
+                            <td class="px-4 py-3 text-slate-400 font-mono">
+                                {{ sess.updated_at[:19] if sess.updated_at else 'Recent' }}
+                            </td>
+                            <td class="px-4 py-3 text-right">
+                                <button onclick="openChatModal({{ loop.index0 }})" class="px-3 py-1.5 rounded-lg text-xs font-bold text-white bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 shadow-sm transition inline-flex items-center gap-1.5">
+                                    <i data-lucide="eye" class="w-3.5 h-3.5"></i> View Full Chat
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
             </div>
             {% else %}
             <div class="text-center py-12 text-slate-500 text-xs">
@@ -158,7 +217,153 @@
 
 </div>
 
+<!-- Full Chat Transcript Modal -->
+<div id="chat-modal" class="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md hidden flex items-center justify-center p-4">
+    <div class="max-w-3xl w-full max-h-[85vh] bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl flex flex-col overflow-hidden">
+        <!-- Modal Header -->
+        <div class="p-4 sm:p-5 bg-slate-950 border-b border-slate-800 flex items-center justify-between">
+            <div>
+                <h3 class="text-base font-bold text-white flex items-center gap-2">
+                    <i data-lucide="messages-square" class="w-5 h-5 text-brand-400"></i>
+                    Session Chat Transcript
+                </h3>
+                <p id="modal-session-subtitle" class="text-xs text-slate-400 font-mono mt-0.5"></p>
+            </div>
+            <div class="flex items-center space-x-3">
+                <button onclick="downloadModalPDF()" class="px-3.5 py-2 rounded-xl bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 text-white text-xs font-bold shadow-md shadow-brand-500/20 flex items-center gap-2 transition">
+                    <i data-lucide="download" class="w-4 h-4"></i> Download PDF
+                </button>
+                <button onclick="closeChatModal()" class="p-2 text-slate-400 hover:text-white rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 transition">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Modal Body -->
+        <div id="modal-chat-body" class="p-6 overflow-y-auto flex-grow space-y-4 bg-slate-950/60">
+            <!-- Messages populated via JS -->
+        </div>
+    </div>
+</div>
+
+<!-- html2pdf.js CDN for PDF Exporting -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
 <script>
+    const chatSessionsData = {{ (chat_sessions_json or '[]')|safe }};
+    let activeModalSession = null;
+
+    function openChatModal(index) {
+        const session = chatSessionsData[index];
+        if (!session) return;
+        activeModalSession = session;
+
+        const modal = document.getElementById('chat-modal');
+        const subtitle = document.getElementById('modal-session-subtitle');
+        const body = document.getElementById('modal-chat-body');
+
+        subtitle.textContent = `Visitor: ${session.visitor_email} | Session: ${session.session_id}`;
+        body.innerHTML = '';
+
+        session.messages.forEach(msg => {
+            const userDiv = document.createElement('div');
+            userDiv.className = 'flex items-start justify-end space-x-3';
+            userDiv.innerHTML = `
+                <div class="p-3.5 rounded-2xl rounded-tr-none bg-brand-600 text-white max-w-xl text-xs shadow-md">
+                    <p class="whitespace-pre-wrap font-medium">${escapeHtml(msg.user_message)}</p>
+                </div>
+                <div class="w-7 h-7 rounded-lg bg-slate-800 flex items-center justify-center text-slate-300 flex-shrink-0 text-xs font-bold">
+                    <i data-lucide="user" class="w-3.5 h-3.5"></i>
+                </div>
+            `;
+            body.appendChild(userDiv);
+
+            const botDiv = document.createElement('div');
+            botDiv.className = 'flex items-start space-x-3';
+            const botHTML = typeof marked !== 'undefined' && typeof marked.parse === 'function'
+                ? marked.parse(msg.bot_response || '')
+                : escapeHtml(msg.bot_response || '');
+
+            botDiv.innerHTML = `
+                <div class="w-7 h-7 rounded-lg bg-brand-600 flex items-center justify-center text-white flex-shrink-0 text-xs">
+                    <i data-lucide="bot" class="w-3.5 h-3.5"></i>
+                </div>
+                <div class="p-3.5 rounded-2xl rounded-tl-none bg-slate-900 border border-slate-800 max-w-xl text-xs text-slate-200 shadow-md">
+                    <div class="markdown-body space-y-2">${botHTML}</div>
+                </div>
+            `;
+            body.appendChild(botDiv);
+        });
+
+        modal.classList.remove('hidden');
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+    }
+
+    function closeChatModal() {
+        document.getElementById('chat-modal').classList.add('hidden');
+        activeModalSession = null;
+    }
+
+    function downloadModalPDF() {
+        if (!activeModalSession) return;
+        const session = activeModalSession;
+
+        const element = document.createElement('div');
+        element.style.padding = '24px';
+        element.style.backgroundColor = '#090d16';
+        element.style.color = '#e2e8f0';
+        element.style.fontFamily = 'sans-serif';
+
+        let html = `
+            <div style="border-bottom: 2px solid #334155; padding-bottom: 14px; margin-bottom: 20px;">
+                <h2 style="font-size: 20px; font-weight: bold; color: #ffffff; margin: 0;">BRAINDOCS - Visitor Chat Transcript</h2>
+                <p style="font-size: 11px; color: #94a3b8; margin-top: 6px;">
+                    <strong>Visitor Email:</strong> ${session.visitor_email}<br/>
+                    <strong>Session ID:</strong> ${session.session_id}<br/>
+                    <strong>Date:</strong> ${session.created_at ? session.created_at.substring(0, 19) : 'N/A'}
+                </p>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 16px;">
+        `;
+
+        session.messages.forEach(msg => {
+            const userText = escapeHtml(msg.user_message);
+            const botText = typeof marked !== 'undefined' && typeof marked.parse === 'function'
+                ? marked.parse(msg.bot_response || '')
+                : escapeHtml(msg.bot_response || '');
+
+            html += `
+                <div style="margin-bottom: 14px;">
+                    <div style="background-color: #4f46e5; color: #ffffff; padding: 10px 14px; border-radius: 10px; font-size: 12px; margin-bottom: 6px; width: fit-content; max-width: 85%; margin-left: auto;">
+                        <strong>Visitor:</strong> ${userText}
+                    </div>
+                    <div style="background-color: #0f172a; color: #cbd5e1; border: 1px solid #1e293b; padding: 10px 14px; border-radius: 10px; font-size: 12px; max-width: 90%;">
+                        <strong style="color: #818cf8;">AI Assistant:</strong><br/>
+                        ${botText}
+                    </div>
+                </div>
+            `;
+        });
+
+        html += `</div>`;
+        element.innerHTML = html;
+
+        const opt = {
+            margin:       [0.4, 0.4, 0.4, 0.4],
+            filename:     `Chat_Session_${session.session_id}.pdf`,
+            image:        { type: 'jpeg', quality: 0.98 },
+            html2canvas:  { scale: 2, backgroundColor: '#090d16' },
+            jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
+        };
+
+        html2pdf().set(opt).from(element).save();
+    }
+
+    function escapeHtml(str) {
+        if (!str) return '';
+        return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+    }
+
     function switchTab(tab) {
         const docsTab = document.getElementById('tab-documents');
         const chatsTab = document.getElementById('tab-chats');
@@ -178,14 +383,48 @@
         }
     }
 
-    document.addEventListener('DOMContentLoaded', () => {
-        document.querySelectorAll('.bot-reply-content').forEach(el => {
-            const raw = el.textContent.trim();
-            if (raw && typeof marked !== 'undefined' && typeof marked.parse === 'function') {
-                el.innerHTML = marked.parse(raw);
+    function togglePassVisibility() {
+        const input = document.getElementById('bot-password-input');
+        const icon = document.getElementById('pass-eye-icon');
+        if (input.type === 'password') {
+            input.type = 'text';
+            icon.setAttribute('data-lucide', 'eye-off');
+        } else {
+            input.type = 'password';
+            icon.setAttribute('data-lucide', 'eye');
+        }
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+    }
+
+    async function handlePasswordSubmit(e) {
+        if (e) e.preventDefault();
+        const inputEl = document.getElementById('bot-password-input');
+        const pass = inputEl.value.trim();
+        try {
+            const res = await fetch("{{ url_for('update_profile_password') }}", {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password: pass })
+            });
+            const data = await res.json();
+            if (data.success) {
+                alert(data.message);
+                window.location.href = window.location.pathname + '?t=' + Date.now();
+            } else {
+                alert('Error updating password: ' + (data.error || 'Unknown error'));
             }
-        });
-    });
+        } catch (err) {
+            console.error('Password save error:', err);
+            alert('Failed to save chatbot password.');
+        }
+    }
+
+    async function removePassword() {
+        if (!confirm('Are you sure you want to remove the chatbot private password? Private documents will no longer be password-protected.')) return;
+        document.getElementById('bot-password-input').value = '';
+        const fakeEvent = { preventDefault: () => {} };
+        await handlePasswordSubmit(fakeEvent);
+    }
 
     async function deleteDocument(docId, filename) {
         if (!confirm(`Are you sure you want to delete "${filename}"?\n\nThis will purge vector embeddings from Pinecone namespace and remove the file from Supabase storage.`)) {

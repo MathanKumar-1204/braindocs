@@ -11,7 +11,7 @@ class Config:
     # Supabase
     SUPABASE_URL = os.getenv("SUPABASE_URL", "")
     SUPABASE_KEY = os.getenv("SUPABASE_KEY", "")
-    SUPABASE_STORAGE_BUCKET = os.getenv("SUPABASE_STORAGE_BUCKET", "braindocs-files")
+    SUPABASE_STORAGE_BUCKET = os.getenv("SUPABASE_STORAGE_BUCKET", "braindocs")
 
     # Pinecone
     PINECONE_API_KEY = os.getenv("PINECONE_API_KEY", "")

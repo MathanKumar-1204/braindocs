@@ -89,24 +89,30 @@ import requests
 
 def _hf_inference_embeddings(text_chunks: List[str]) -> Optional[List[List[float]]]:
     """Uses Hugging Face free Inference API for zero-RAM 384-dim embedding generation."""
-    try:
-        url = "https://api-inference.huggingface.co/pipeline/feature-extraction/sentence-transformers/all-MiniLM-L6-v2"
-        response = requests.post(url, json={"inputs": text_chunks, "options": {"wait_for_model": True}}, timeout=10)
-        if response.status_code == 200:
-            res = response.json()
-            if isinstance(res, list) and len(res) > 0:
-                embeddings = []
-                for item in res:
-                    if isinstance(item, list) and len(item) > 0 and isinstance(item[0], list):
-                        # Mean pool token vectors
-                        vec = [sum(col) / len(col) for col in zip(*item)]
-                        embeddings.append(vec)
-                    elif isinstance(item, list) and len(item) > 0 and isinstance(item[0], (int, float)):
-                        embeddings.append(item)
-                if len(embeddings) == len(text_chunks):
-                    return embeddings
-    except Exception as e:
-        logger.warning(f"Hugging Face Inference API exception: {e}")
+    endpoints = [
+        "https://api-inference.huggingface.co/models/sentence-transformers/all-MiniLM-L6-v2",
+        "https://api-inference.huggingface.co/pipeline/feature-extraction/sentence-transformers/all-MiniLM-L6-v2"
+    ]
+    for url in endpoints:
+        try:
+            response = requests.post(url, json={"inputs": text_chunks, "options": {"wait_for_model": True}}, timeout=2.5)
+            if response.status_code == 200:
+                res = response.json()
+                if isinstance(res, list) and len(res) > 0:
+                    embeddings = []
+                    for item in res:
+                        if isinstance(item, list) and len(item) > 0 and isinstance(item[0], list):
+                            # Mean pool token vectors
+                            vec = [sum(col) / len(col) for col in zip(*item)]
+                            embeddings.append(vec)
+                        elif isinstance(item, list) and len(item) > 0 and isinstance(item[0], (int, float)):
+                            embeddings.append(item)
+                    if len(embeddings) == len(text_chunks):
+                        return embeddings
+        except requests.exceptions.RequestException as e:
+            logger.debug(f"Hugging Face endpoint {url} unavailable: {e}")
+        except Exception as e:
+            logger.debug(f"Hugging Face embedding parse warning: {e}")
     return None
 
 

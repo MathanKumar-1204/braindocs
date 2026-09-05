@@ -34,13 +34,13 @@ def get_pinecone_index():
     return _pinecone_index
 
 
-def upsert_vectors_to_namespace(username: str, doc_id: str, filename: str, chunks: List[str], embeddings: List[List[float]]) -> bool:
+def upsert_vectors_to_namespace(username: str, doc_id: str, filename: str, chunks: List[str], embeddings: List[List[float]], target_namespace: Optional[str] = None, visibility: str = "public") -> bool:
     """
-    Upserts document chunk vector embeddings into Pinecone under the user's custom namespace (`{username}`).
-    Metadata contains doc_id, filename, chunk_index, and original text.
+    Upserts document chunk vector embeddings into Pinecone under the target namespace
+    (e.g., `{username}` for public, or `{username}-private` for private).
     """
     index = get_pinecone_index()
-    namespace = username.strip().lower()
+    namespace = (target_namespace or username).strip().lower()
 
     if not chunks or not embeddings or len(chunks) != len(embeddings):
         logger.warning("Empty or mismatched chunks/embeddings for vector upsert.")
@@ -53,7 +53,9 @@ def upsert_vectors_to_namespace(username: str, doc_id: str, filename: str, chunk
             "document_id": str(doc_id),
             "filename": str(filename),
             "chunk_index": i,
-            "text": str(chunk)
+            "text": str(chunk),
+            "visibility": str(visibility),
+            "namespace": str(namespace)
         }
         vectors.append({
             "id": vector_id,
@@ -114,12 +116,12 @@ def query_vector_namespace(username: str, query_vector: List[float], top_k: int 
         return []
 
 
-def delete_vectors_by_document(username: str, doc_id: str, chunk_count: int = 500) -> bool:
+def delete_vectors_by_document(username: str, doc_id: str, chunk_count: int = 500, target_namespace: Optional[str] = None) -> bool:
     """
     Deletes all vector chunks associated with a specific document_id from the user's Pinecone namespace.
     """
     index = get_pinecone_index()
-    namespace = username.strip().lower()
+    namespace = (target_namespace or username).strip().lower()
 
     if not index:
         logger.warning(f"Pinecone not configured. Simulating vector deletion for doc_id {doc_id} in namespace '{namespace}'.")

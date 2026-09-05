@@ -6,8 +6,12 @@ CREATE TABLE IF NOT EXISTS public.profiles (
     id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
     email TEXT NOT NULL,
     username TEXT UNIQUE,
+    password TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
+
+-- Ensure password column exists if updating existing profiles table
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS password TEXT;
 
 -- Index for fast username lookups
 CREATE INDEX IF NOT EXISTS idx_profiles_username ON public.profiles(username);
@@ -22,6 +26,8 @@ CREATE TABLE IF NOT EXISTS public.documents (
     file_type TEXT NOT NULL,
     file_size BIGINT NOT NULL,
     chunk_count INT DEFAULT 0,
+    visibility TEXT DEFAULT 'public',
+    namespace TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
@@ -34,14 +40,16 @@ CREATE TABLE IF NOT EXISTS public.chat_logs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     bot_username TEXT NOT NULL,
     visitor_email TEXT NOT NULL,
+    session_id TEXT,
     user_message TEXT NOT NULL,
     bot_response TEXT NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- Index for fast chatbot log filtering by bot owner and visitor email
+-- Index for fast chatbot log filtering by bot owner, visitor email and session_id
 CREATE INDEX IF NOT EXISTS idx_chat_logs_bot_username ON public.chat_logs(bot_username);
 CREATE INDEX IF NOT EXISTS idx_chat_logs_visitor_email ON public.chat_logs(visitor_email);
+CREATE INDEX IF NOT EXISTS idx_chat_logs_session_id ON public.chat_logs(session_id);
 
 -- 4. Automatically create profile entry when new auth user signs up
 CREATE OR REPLACE FUNCTION public.handle_new_user()
@@ -97,7 +105,14 @@ DROP POLICY IF EXISTS "Allow chat_logs insert" ON public.chat_logs;
 CREATE POLICY "Allow chat_logs select" ON public.chat_logs FOR SELECT USING (true);
 CREATE POLICY "Allow chat_logs insert" ON public.chat_logs FOR INSERT WITH CHECK (true);
 
--- 6. Storage Bucket Instruction
--- Go to Supabase Storage -> New Bucket
--- Name: braindocs-files
--- Public bucket: ON (or set policy to allow public read / authenticated write)
+-- 6. Storage Bucket RLS Policies for 'braindocs' Bucket
+-- Execute these queries to allow reading, uploading, updating, and deleting files in your Supabase storage bucket
+DROP POLICY IF EXISTS "Allow storage select on braindocs" ON storage.objects;
+DROP POLICY IF EXISTS "Allow storage insert on braindocs" ON storage.objects;
+DROP POLICY IF EXISTS "Allow storage update on braindocs" ON storage.objects;
+DROP POLICY IF EXISTS "Allow storage delete on braindocs" ON storage.objects;
+
+CREATE POLICY "Allow storage select on braindocs" ON storage.objects FOR SELECT USING (bucket_id = 'braindocs');
+CREATE POLICY "Allow storage insert on braindocs" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'braindocs');
+CREATE POLICY "Allow storage update on braindocs" ON storage.objects FOR UPDATE USING (bucket_id = 'braindocs');
+CREATE POLICY "Allow storage delete on braindocs" ON storage.objects FOR DELETE USING (bucket_id = 'braindocs');
